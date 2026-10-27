@@ -20,6 +20,12 @@ importers:
 
   packages/@hypa-config: {}
 
+  packages/@hypa-translate-core:
+    dependencies:
+      '@hypa/config':
+        specifier: workspace:*
+        version: link:../@hypa-config
+
   packages/typescript-config: {}
 
 packages:
