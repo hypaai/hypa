@@ -1,0 +1,517 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum message_role {
+  user
+  assistant
+}
+
+enum request_source {
+  labs
+  api
+}
+
+enum content_type {
+  markdown
+}
+
+enum auth_provider {
+  email
+  google
+}
+
+enum compare_type {
+  AC
+  LLM
+  MT
+  ASR
+  TTS
+}
+
+enum developer_request_type {
+  machine_translation
+  text_to_speech
+  speech_to_text
+  ocr
+  chat
+}
+
+enum developer_request_provider {
+  hypaai
+  google
+  openai
+  anthropic
+  elevenlabs
+  custom
+  mansa
+  meta
+  yarnGPT
+}
+
+enum currency {
+  usd
+}
+
+enum charge_type {
+  tokens
+  audio_minutes
+  character_count
+}
+
+enum bookmark_source {
+  dictionary
+}
+
+enum invoice_status {
+  pending
+  paid
+  failed
+}
+
+enum referral_status {
+  pending
+  completed
+}
+
+model wallet {
+  id String @id @default(cuid())
+
+  currency currency @default(usd)
+  balance  Decimal  @default(0)
+
+  user   user   @relation(fields: [userId], references: [id])
+  userId String @unique
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model user {
+  id    String @id @default(cuid())
+  email String @unique
+
+  first_name String?
+  last_name  String?
+
+  password           String?
+  auth_provider      auth_provider       @default(email)
+  created_at         DateTime            @default(now())
+  updated_at         DateTime            @updatedAt
+  chats              chat[]
+  translations       translation[]
+  transcriptions     transcription[]
+  syntheses          Synthesis[]
+  compares           Compare[]
+  api_keys           api_key[]
+  developerRequests  developer_request[]
+  yarnOperations     yarn_tts_operation[]
+  wallet             wallet?
+  walletId           String?             @unique
+  invoices           invoice[]
+  customModels       custom_model[]
+  customVoices       custom_voice[]
+  bookmarks          bookmark[]
+  dictionarySearches dictionary_search[]
+  benchmarkResults   benchmark_result[]
+
+  referral_code   String    @unique
+  referrals       referral[] @relation("referrer")
+  referred_by     referral?  @relation("referred")
+  referral_points Int        @default(0)
+}
+
+model dictionary_search {
+  id       String @id @default(cuid())
+  word     String
+  language String
+  result   Json
+
+  user   user   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model bookmark {
+  id       String          @id @default(cuid())
+  type     bookmark_source @default(dictionary)
+  word     String
+  language String
+  result   Json
+
+  user   user   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([userId, word, language])
+  @@index([userId])
+}
+
+model custom_voice {
+  id               String  @id @default(cuid())
+  name             String
+  description      String?
+  cloning_features Json
+  model            String?
+  provider         String?
+  user             user    @relation(fields: [userId], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  userId     String
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model chat {
+  id       String    @id @default(cuid())
+  title    String    @default("New Chat")
+  user     user      @relation(fields: [userId], references: [id])
+  messages message[]
+  archive  Boolean   @default(false)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  userId     String
+
+  provider           String?
+  model_name         String?
+  output_length      Int?
+  stop_sequence      String[]
+  system_instruction String?
+  temperature        Float?
+  top_k              Float?
+  top_p              Float?
+}
+
+model invoice {
+  id                         String         @id @default(cuid())
+  user                       user           @relation(fields: [userId], references: [id])
+  userId                     String
+  amount                     Decimal
+  status                     invoice_status @default(pending)
+  stripe_checkout_session_id String?        @unique
+  created_at                 DateTime       @default(now())
+  updated_at                 DateTime       @updatedAt
+}
+
+model referral {
+  id String @id @default(cuid())
+
+  status referral_status @default(pending)
+
+  points_awarded Int @default(0)
+
+  source_app String?
+
+  referrer   user   @relation("referrer", fields: [referrerId], references: [id])
+  referrerId String
+
+  referred   user?   @relation("referred", fields: [referredId], references: [id])
+  referredId String? @unique
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([referrerId])
+}
+
+model message {
+  id                  String       @id @default(cuid())
+  chat                chat?        @relation(fields: [chatId], references: [id])
+  content             String?      @db.Text()
+  role                message_role
+  open_ai_response_id String?
+
+  content_type content_type @default(markdown)
+  chatId       String?
+
+  parent   message?  @relation("parent_message", fields: [parentId], references: [id])
+  children message[] @relation("parent_message")
+  parentId String?   @unique
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model translation {
+  id String @id @default(cuid())
+
+  input_text  String @db.Text()
+  output_text String @db.Text()
+
+  source_lang String?
+  target_lang String? @default("yoruba")
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  model       String?
+  provider    String?
+  auto_resolution Json?
+  temperature Float?
+  top_k       Float?
+  top_p       Float?
+
+  translate_history Boolean @default(false)
+  client_request_id String?
+  bookmarked        Boolean @default(false)
+  liked             Boolean?
+  correction        String? @db.Text()
+  thinking          String? @db.Text()
+
+  userId String
+  user   user   @relation(fields: [userId], references: [id])
+
+  @@index([userId, translate_history, created_at])
+  @@unique([userId, client_request_id])
+}
+
+model transcription {
+  id String @id @default(cuid())
+
+  file_id String
+
+  transcription String
+
+  model              String?
+  system_instruction String?
+  temperature        Int?
+  top_p              Int?
+  top_k              Int?
+
+  userId String
+  user   user   @relation(fields: [userId], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model Synthesis {
+  id   String @id @default(cuid())
+  text String
+
+  file_id String
+
+  voice              String
+  model              String?
+  temperature        Int?
+  top_p              Int?
+  repetition_penalty Int?
+  max_new_tokens     Int?
+
+  userId String
+  user   user   @relation(fields: [userId], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model Compare {
+  id String @id @default(cuid())
+
+  title String?
+
+  prompt String
+  type   compare_type @default(AC)
+
+  model_a String
+  model_b String
+
+  output_length      Int?
+  stop_sequence      String[]
+  system_instruction String?
+  temperature        Float?
+  top_p              Float?
+  top_k              Float?
+
+  source_lang String?
+  target_lang String?
+
+  mimeType String?
+
+  language_a         String?
+  voice_a            String?
+  language_b         String?
+  voice_b            String?
+  voice              String?
+  repetition_penalty Float?
+  max_new_tokens     Int?
+
+  response_a String? @db.Text
+  response_b String? @db.Text
+  auto_resolution Json?
+
+  userId String
+  user   user   @relation(fields: [userId], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model benchmark_result {
+  id String @id @default(cuid())
+
+  taskType   compare_type
+  provider   developer_request_provider
+  model      String
+  datasetKey String
+
+  transcriberProvider developer_request_provider?
+  transcriberModel    String?
+
+  metrics     Json
+  sampleCount Int
+
+  language_metrics Json?
+
+  hidden Boolean @default(false)
+
+  ranBy   user   @relation(fields: [ranById], references: [id])
+  ranById String
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([datasetKey, provider, model])
+}
+
+model developer_request {
+  id                     String                 @id @default(cuid())
+  type                   developer_request_type
+  charge_type            charge_type            @default(tokens)
+  audio_duration_seconds Decimal                @default(0)
+  character_count        Decimal                @default(0)
+
+  prompt_tokens  Decimal @default(0)
+  output_tokens  Decimal @default(0)
+  total_tokens   Decimal @default(0)
+  estimated_cost Decimal @default(0)
+
+  data Json
+
+  user   user   @relation(fields: [userId], references: [id])
+  userId String
+
+  api_key  api_key @relation(fields: [apiKeyId], references: [id])
+  apiKeyId String
+
+  provider developer_request_provider
+  model    String
+
+  request_source request_source @default(api)
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+}
+
+model api_key {
+  id        String   @id @default(cuid())
+  key       String   @unique @db.VarChar(255)
+  key_index String   @unique @db.VarChar(64)
+  label     String?
+  currency  currency @default(usd)
+
+  is_deleted Boolean @default(false)
+
+  created_source request_source @default(api)
+
+  user               user                @relation(fields: [userId], references: [id])
+  userId             String
+  created_at         DateTime            @default(now())
+  updated_at         DateTime            @updatedAt
+  developer_requests developer_request[]
+  yarnOperations     yarn_tts_operation[]
+}
+
+enum model_type {
+  AC
+  MT
+  TTS
+  ASR
+  OCR
+  ALI
+  VC
+}
+
+model custom_model {
+  id String @id @default(cuid())
+
+  model_name   String     @db.VarChar(255)
+  display_name String     @db.VarChar(255)
+  api_url      String     @db.VarChar(512)
+  api_key      String     @db.VarChar(512)
+  model_type   model_type
+  is_active    Boolean    @default(true)
+  voices       Json?
+  languages    String[]   @default([])
+
+  user   user   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model document_chunk {
+  id         String                       @id @default(dbgenerated("(gen_random_uuid())::text"))
+  content    String                       @db.Text
+  embedding  Unsupported("vector(1536)")?
+  metadata   Json?
+  source     String?
+  created_at DateTime                     @default(now())
+
+  @@index([source])
+  @@map("document_chunks")
+}
+
+enum yarn_operation_status {
+  pending
+  refund_pending
+  completed
+  refunded
+}
+
+model yarn_tts_operation {
+  id              String                @id
+  status          yarn_operation_status @default(pending)
+  userId          String
+  apiKeyId        String
+  user            user                  @relation(fields: [userId], references: [id])
+  api_key         api_key               @relation(fields: [apiKeyId], references: [id])
+  requestSource   request_source        @default(api)
+  model           String
+  text            String
+  voice           String
+  language        String
+  apiUrl          String
+  characterCount  Int
+  rate            Decimal
+  cost            Decimal
+  providerJobId   String?
+  historyRecorded Boolean               @default(false)
+  result          Json?
+  deadlineAt      DateTime
+  leaseToken      String?
+  leaseUntil      DateTime?
+  created_at      DateTime              @default(now())
+  updated_at      DateTime              @updatedAt
+
+  @@index([status, leaseUntil])
+  @@index([status, deadlineAt])
+  @@index([status, historyRecorded, created_at])
+  @@index([userId, apiKeyId, created_at])
+}
