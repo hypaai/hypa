@@ -20,6 +20,8 @@ importers:
 
   packages/@hypa-config: {}
 
+  packages/@hypa-tiny-keys: {}
+
   packages/@hypa-translate-core:
     dependencies:
       '@hypa/config':
