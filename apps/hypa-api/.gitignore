@@ -1,0 +1,8 @@
+/dist
+/node_modules
+/src/generated
+/public/audio
+*.log
+.env
+.env.*.local
+.env.local
