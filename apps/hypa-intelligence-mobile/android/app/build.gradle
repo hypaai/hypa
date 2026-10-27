@@ -1,0 +1,162 @@
+apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+
+def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
+
+def readEnvValue = { key, fallback ->
+    def envValue = System.getenv(key)
+    if (envValue != null && !envValue.trim().isEmpty()) {
+        return envValue.trim()
+    }
+
+    def envFile = new File(projectRoot, ".env")
+    if (!envFile.exists()) {
+        return fallback
+    }
+
+    def matches = envFile.readLines().findAll { candidate ->
+        candidate.trim().startsWith("${key}=")
+    }
+    def line = matches.isEmpty() ? null : matches.last()
+    if (line == null) {
+        return fallback
+    }
+
+    def value = line.substring(line.indexOf("=") + 1)
+        .replaceAll(/\s+#.*$/, "")
+        .trim()
+        .replaceAll(/^['"]|['"]$/, "")
+
+    return value.isEmpty() ? fallback : value
+}
+
+react {
+    entryFile = file(["node", "-e", "require('expo/scripts/resolveAppEntry')", projectRoot, "android", "absolute"].execute(null, rootDir).text.trim())
+    reactNativeDir = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
+    hermesCommand = new File(["node", "--print", "require.resolve('hermes-compiler/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim()).getParentFile().getAbsolutePath() + "/hermesc/%OS-BIN%/hermesc"
+    codegenDir = new File(["node", "--print", "require.resolve('@react-native/codegen/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
+
+    enableBundleCompression = (findProperty('android.enableBundleCompression') ?: false).toBoolean()
+    cliFile = new File(["node", "--print", "require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })"].execute(null, rootDir).text.trim())
+    bundleCommand = "export:embed"
+
+    autolinkLibrariesWithApp()
+}
+
+def enableMinifyInReleaseBuilds = (findProperty('android.enableMinifyInReleaseBuilds') ?: true).toBoolean()
+
+def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+
+android {
+    ndkVersion rootProject.ext.ndkVersion
+
+    buildToolsVersion rootProject.ext.buildToolsVersion
+    compileSdk rootProject.ext.compileSdkVersion
+
+    namespace 'com.hypaintelligence.hypaintelligence'
+    defaultConfig {
+        applicationId 'com.hypaintelligence.hypaintelligence'
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 25
+        versionName "1.0.0"
+
+        buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
+        buildConfigField "String", "HYPA_API_BASE_URL", "\"${readEnvValue('EXPO_PUBLIC_API_BASE_URL', 'https://api.hypaintelligence.com').replaceAll('/+$', '')}\""
+        buildConfigField "String", "HYPA_LIVE_BASE_URL", "\"${readEnvValue('EXPO_PUBLIC_LIVE_BASE_URL', '').replaceAll('/+$', '')}\""
+    }
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            signingConfig signingConfigs.debug
+            def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
+            shrinkResources enableShrinkResources.toBoolean()
+            minifyEnabled enableMinifyInReleaseBuilds
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            def enablePngCrunchInRelease = findProperty('android.enablePngCrunchInReleaseBuilds') ?: 'true'
+            crunchPngs enablePngCrunchInRelease.toBoolean()
+        }
+    }
+    packagingOptions {
+        jniLibs {
+            def enableLegacyPackaging = findProperty('expo.useLegacyPackaging') ?: 'false'
+            useLegacyPackaging enableLegacyPackaging.toBoolean()
+        }
+    }
+    androidResources {
+        ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
+    }
+    sourceSets {
+        main.assets.srcDirs += ["$projectRoot/keyboard-data"]
+        main.assets.srcDirs += [layout.buildDirectory.dir("generated/tinyKeysAssets")]
+    }
+}
+
+def tinyKeysModels = "$projectRoot/../../packages/@hypa-tiny-keys/models"
+tasks.register("copyTinyKeys", Sync) {
+    from(tinyKeysModels) { include "model.int8.onnx", "tokenizer.json" }
+    into(layout.buildDirectory.dir("generated/tinyKeysAssets/tiny-keys"))
+    doFirst {
+        ["model.int8.onnx", "tokenizer.json"].each { name ->
+            if (!file("$tinyKeysModels/$name").exists()) {
+                throw new GradleException("Missing $tinyKeysModels/$name. Run pnpm install at the repo root.")
+            }
+        }
+    }
+}
+preBuild.dependsOn("copyTinyKeys")
+
+["pickFirsts", "excludes", "merges", "doNotStrip"].each { prop ->
+    def options = (findProperty("android.packagingOptions.$prop") ?: "").split(",");
+    for (i in 0..<options.size()) options[i] = options[i].trim();
+    options -= ""
+
+    if (options.length > 0) {
+        println "android.packagingOptions.$prop += $options ($options.length)"
+        options.each {
+            android.packagingOptions[prop] += it
+        }
+    }
+}
+
+dependencies {
+    implementation("com.facebook.react:react-android")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.java-websocket:Java-WebSocket:1.5.7")
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.30.0")
+
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation("androidx.emoji2:emoji2:1.4.0")
+
+    def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
+    def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
+    def isWebpAnimatedEnabled = (findProperty('expo.webp.animated') ?: "") == "true";
+
+    if (isGifEnabled) {
+        implementation("com.facebook.fresco:animated-gif:${expoLibs.versions.fresco.get()}")
+    }
+
+    if (isWebpEnabled) {
+        implementation("com.facebook.fresco:webpsupport:${expoLibs.versions.fresco.get()}")
+        if (isWebpAnimatedEnabled) {
+            implementation("com.facebook.fresco:animated-webp:${expoLibs.versions.fresco.get()}")
+        }
+    }
+
+    if (hermesEnabled.toBoolean()) {
+        implementation("com.facebook.react:hermes-android")
+    } else {
+        implementation jscFlavor
+    }
+}

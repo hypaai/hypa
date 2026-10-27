@@ -1,0 +1,5 @@
+{
+  "name": "hypa-keyboard-android-ime",
+  "private": true,
+  "main": "app.plugin.js"
+}
