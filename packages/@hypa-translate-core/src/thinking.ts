@@ -1,4 +1,4 @@
-export type ParsedTranslation = {
+type ParsedTranslation = {
   thinkingContent: string | null;
   mainContent: string;
 };
@@ -40,12 +40,3 @@ export const attachThinking = (translation: string, thinking: string) => {
   return `<think>${thinking.trim()}</think>\n${main}`;
 };
 
-export const hydrateTranslationThinking = (
-  translation: string,
-  thinking?: string | null,
-) => {
-  const savedThinking = thinking?.trim();
-  return savedThinking
-    ? attachThinking(translation, savedThinking)
-    : translation;
-};

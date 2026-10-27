@@ -1,0 +1,201 @@
+{
+  "MT": {
+    "providers": {
+      "hypaai": {
+        "default": {
+          "system": "You are a helpful and honest multilingual translation expert specialized in translation.",
+          "user": "Translate the following text from {sourceLang} to {targetLang}. Return ONLY the translated text without any extra commentary or formatting:\n\n{text}"
+        },
+        "Hypa-Llama3.1-8b-SFT": {
+          "system": "You are Hypa Translate. Translate from {sourceLang} to {targetLang}. Return only the exact translation",
+          "user": "{text}",
+          "thinkingPrefix": "<|think>"
+        }
+      },
+      "openai": {
+        "system": "You are a helpful and honest africa translation expert specialized in translation in (yoruba, hausa, igbo, annang, efik, ibibio, tiv, idoma).",
+        "user": "Translate this text {targetInstruction} and Return ONLY THE EXACT TRANSLATION. {text}"
+      },
+      "google": {
+        "system": "You are a professional multilingual translator. Follow the requested source and target languages exactly. Return only the translated text without commentary, labels, quotation marks, or Markdown.",
+        "user": {
+          "auto": "Detect the source language and translate the following text to {targetLang}:\n\n{text}",
+          "explicit": "Translate the following text from {sourceLang} to {targetLang}:\n\n{text}"
+        }
+      },
+      "custom": {
+        "system": "You are a helpful and honest translation expert specialized in translation.",
+        "user": "Translate this text {targetInstruction} and Return ONLY THE EXACT TRANSLATION. {text}"
+      }
+    },
+    "thinkingExplanation": {
+      "system": "You are Hypa Translate. Generate the breakdown for the translation to {targetLang}.",
+      "user": "{sourceLang}: {sourceText}\n\n{targetLang}: {targetText}"
+    },
+    "nonHypaThinkingExplanation": [
+      {
+        "role": "system",
+        "content": "You are ${provider} Translate. Generate the breakdown for the translation to ${targetLang}. Never output <think>, </think>, or hidden reasoning tags."
+      },
+      {
+        "role": "user",
+        "content": "English: Every evening, the dogs in our neighbourhood are howling.\n\nFrench: Chaque soir, les chiens dans notre quartier hurlent."
+      },
+      {
+        "role": "assistant",
+        "content": "‘Every evening’ translates to ‘Chaque soir.’\n\n‘The dogs’ is ‘les chiens.’ ‘In our neighbourhood’ translates to ‘dans notre quartier.’\n\n‘Are howling’ is ‘hurlent.’\n\nPutting it all together, the final translation is: ‘Chaque soir, les chiens dans notre quartier hurlent.’"
+      },
+      {
+        "role": "user",
+        "content": "Arabic: تقدم وايز إلى الممر الرئيسي للمدرسة.\n\nEnglish: Weise proceeded into the main corridor of the school."
+      },
+      {
+        "role": "assistant",
+        "content": "Breaking it down:\n\n- ‘تقدم’ translates to ‘proceeded.’\n- ‘وايز’ remains ‘Weise.’\n- ‘إلى’ translates to ‘into.’\n- ‘الممر الرئيسي’ translates to ‘the main corridor.’\n- ‘للمدرسة’ translates to ‘of the school.’\n\nPutting it all together: ‘Weise proceeded into the main corridor of the school.’"
+      },
+      {
+        "role": "user",
+        "content": "French: L'emblème de l'organisation fusionnée combine des éléments des deux prédécesseurs.\n\nFongbe: Wuntun gbèta e kplé nú de lě ye mɛn e wayi lě."
+      },
+      {
+        "role": "assistant",
+        "content": "French: L'emblème de l'organisation fusionnée combine des éléments des deux prédécesseurs.\n\nFongbe: Wuntun gbèta e kplé nú de lě ye mɛn e wayi lě."
+      },
+      {
+        "role": "user",
+        "content": "English: Woodbury Heights is governed under the Borough form of New Jersey municipal government.\n\nSpanish: Woodbury Heights está gobernado bajo la forma de Borough del gobierno municipal de Nueva Jersey."
+      },
+      {
+        "role": "assistant",
+        "content": "‘Woodbury Heights’ remains the same because it is a proper noun. ‘Is governed’ translates to ‘está gobernado.’ ‘Under the Borough form’ translates to ‘bajo la forma de Borough.’ ‘Of New Jersey municipal government’ translates to ‘del gobierno municipal de Nueva Jersey.’\n\nFinal translation: ‘Woodbury Heights está gobernado bajo la forma de Borough del gobierno municipal de Nueva Jersey.’"
+      },
+      {
+        "role": "user",
+        "content": "English: At the state level Ermington is contained within the State Electoral District Of Parramatta.\n\nSwahili: Kiwilaya cha serikali Ermington kiko ndani ya Wilaya ya Uchaguzi ya Jimbo la Parramatta."
+      },
+      {
+        "role": "assistant",
+        "content": "‘At the state level’ = ‘Kiwilaya cha serikali’, ‘Ermington’ = ‘Ermington’, ‘is contained within’ = ‘iko ndani ya’, ‘the State Electoral District Of Parramatta’ = ‘Wilaya ya Uchaguzi ya Jimbo la Parramatta’.\n\nFinal sentence: ‘Kiwilaya cha serikali Ermington kiko ndani ya Wilaya ya Uchaguzi ya Jimbo la Parramatta.’"
+      },
+      {
+        "role": "user",
+        "content": "${sourceLang}: ${sourceText}\n\n${targetLang}: ${targetText}"
+      }
+    ],
+    "nonHypaLanguageDetection": [
+      {
+        "role": "system",
+        "content": "You are ${provider} Translate, Detect the input language. Return only the language name."
+      },
+      {
+        "role": "user",
+        "content": "Good morning, how are you?"
+      },
+      {
+        "role": "assistant",
+        "content": "English"
+      },
+      {
+        "role": "user",
+        "content": "Ẹ kú àárọ̀, ṣé dáadáa ni?"
+      },
+      {
+        "role": "assistant",
+        "content": "Yoruba"
+      },
+      {
+        "role": "user",
+        "content": "Ina kwana, yaya kake?"
+      },
+      {
+        "role": "assistant",
+        "content": "Hausa"
+      },
+      {
+        "role": "user",
+        "content": "Ụtụtụ ọma, kedu ka ị mere?"
+      },
+      {
+        "role": "assistant",
+        "content": "Igbo"
+      },
+      {
+        "role": "user",
+        "content": "Bonjour, comment ça va ?"
+      },
+      {
+        "role": "assistant",
+        "content": "French"
+      },
+      {
+        "role": "user",
+        "content": "${text}"
+      }
+    ]
+  },
+  "DICTIONARY": {
+    "nonHypaExample": [
+      {
+        "role": "system",
+        "content": "You are ${provider} Dictionary. Given a word, return:\n\n${sections}\n\nUse this structure only. No tables and keep each section header in English."
+      },
+      {
+        "role": "user",
+        "content": "Unable in French"
+      },
+      {
+        "role": "assistant",
+        "content": "### Word:\nUnable\n\n### Definition:\n• *Adjectif* : Qui n'a pas la capacité, la permission ou la possibilité de faire quelque chose.\n\n### Synonyms:\n• Incapable\n• Inapte\n• Impossibilisé\n\n### Antonyms:\n• Capable\n• Apte\n• Possible\n\n### Examples Usage:\n• Il est *unable* à résoudre le problème sans aide. (adjectif)\n• Malgré ses efforts, elle se sent *unable* à parler en public. (adjectif)\n• Le système est *unable* à répondre à la demande. (adjectif)\n• Nous sommes *unable* à accepter cette proposition. (adjectif)\n• Le logiciel est *unable* à détecter les erreurs. (adjectif)\n\n### Cultural Context:\nLe mot « unable » est un anglicisme souvent utilisé dans les milieux professionnels français, surtout dans le domaine de la technologie et du management, où l'anglais domine. Cependant, il est généralement préférable d’utiliser les équivalents français « incapable » ou « dans l'incapacité » pour rester conforme aux règles de la langue.\n\n### Fun Fact:\nLe terme « unable » apparaît pour la première fois en anglais au XIVᵉ siècle, dérivé du préfixe « un- » (négation) et du verbe « able » (pouvoir)."
+      },
+      {
+        "role": "user",
+        "content": "Incapaz in English"
+      },
+      {
+        "role": "assistant",
+        "content": "### Word:\nUnable\n\n### Definition:\n• *Adjective:* Not having the ability, power, or means to do something.\n\n### Synonyms:\n• Incapable\n• Incompetent\n• Powerless\n\n### Antonyms:\n• Able\n• Capable\n• Competent\n\n### Examples Usage:\n• She was *unable* to attend the meeting because of a sudden illness.\n• The old bridge is *unable* to support heavy trucks.\n• He felt *unable* to express his true feelings.\n• The software is *unable* to process the file format.\n• Despite training, the dog remained *unable* to fetch the ball.\n\n### Cultural Context:\nIn English-speaking cultures, saying someone is \"unable\" often carries a polite tone, especially in professional or formal settings, to avoid blunt criticism. It's frequently used in customer service, education, and healthcare to explain limitations without assigning blame.\n\n### Fun Fact:\nThe word \"unable\" dates back to the late 14th century, combining the prefix \"un-\" (meaning \"not\") with \"able,\" showing how English readily forms opposites by simple addition of prefixes."
+      },
+      {
+        "role": "user",
+        "content": "Abducent in Spanish"
+      },
+      {
+        "role": "assistant",
+        "content": "### Word:\nAbducente\n\n### Definition:\n• Adjetivo: Que tiene la capacidad de llevar o alejar algo de un punto de referencia.\n\n### Synonyms:\n• Retirante\n• Aislante\n• Desviador\n\n### Antonyms:\n• Atractivo\n• Conducente\n• Aproximante\n\n### Examples Usage:\n• El nervio abducente controla el movimiento de algunos músculos oculares.\n• En biología, una fuerza abducente puede afectar la dirección de crecimiento de las células.\n• La abducción en matemáticas se refiere a la acción de alejar un objeto de su posición original.\n• Las fuerzas abducente en un experimento pueden alterar los resultados esperados.\n• Los músculos abducentes son fundamentales para la movilidad de los miembros.\n\n### Cultural Context:\nLa palabra \"abducente\" es más comúnmente utilizada en contextos médicos y científicos, particularmente en anatomía y biología. En la cultura hispánica, el conocimiento sobre el sistema nervioso y sus funciones es crucial, especialmente en los campos de la salud y la educación.\n\n### Fun Fact:\nEl término \"abducción\" proviene del latín \"abductio\", que significa \"llevar lejos\" o \"alejar\", y es utilizado no solo en contextos científicos, sino también en la cultura popular relacionada con teorías sobre extraterrestres."
+      },
+      {
+        "role": "user",
+        "content": "Dying in Yoruba"
+      },
+      {
+        "role": "assistant",
+        "content": "### Word:\nKíkú\n\n### Definition:\n• Ọ̀rọ̀-ìṣe (ìṣẹ̀lẹ̀ lọ́wọ́lọ́wọ́): rírìn lọ sí ikú; dídàgbére fún ìyè.\n• Ọ̀rọ̀-àpèjúwe: súnmọ́ ikú; wíwà nínú ipò ikú tó kù fẹ̀rẹ̀.\n• Ọ̀rọ̀-orúkọ (orúkọ-ìṣe): ìṣe tàbí ìgbésẹ̀ kíkú; ikú.\n\n### Synonyms:\n• Lílọ\n• Jíjá-ẹmí\n• Sísọnù\n• Dídágbére\n• Jíjúwọ́-sílẹ̀\n\n### Antonyms:\n• Wíwà láàyè\n• Kí kó yọ\n• Gbígbé-pẹ́\n• Gbígbé-rere\n• Sísọjí\n\n### Examples Usage:\n• Òdòdó náà ń *kú* nítorí pé a kò bomi rin ín. (ọ̀rọ̀-ìṣe)\n• Ó dà bí ẹni tó ń *kú* lórí ojú ogun, kò sì lè rìn. (ọ̀rọ̀-àpèjúwe)\n• Kíkú igi óòkù àtijọ́ náà jẹ́ ìbànújẹ́ fún gbogbo ìlú. (ọ̀rọ̀-orúkọ)\n• Lẹ́yìn jám̀bá náà, aláìsàn náà ń *kú* lọ, ó sì nílò ìtọ́jú ní kíákíá. (ọ̀rọ̀-ìṣe)\n• Ó nímọ̀lára ìrètí tó ń *kú* lọ pé ìjì náà yóò kọjá láìpẹ́. (ọ̀rọ̀-àpèjúwe)\n\n### Cultural Context:\nÀwọn ìjíròrò nípa ikú máa ń sábà jẹ́ pẹ̀lú àwọn ọ̀rọ̀ bí i \"passing away\" tàbí \"departed.\" Ọ̀rọ̀ náà \"dying\" ni a máa ń lò ní àwọn ìjíròrò tó jẹ mọ́ ìlera, pẹ̀lú ìjíròrò ọ̀rọ̀ oníṣègùn nípa ikú.\n\n### Fun Fact:\nGbólóhùn náà \"ikú ti ìmọ́lẹ̀,\" èyí tí akéwì Dylan Thomas ṣe àfihàn rẹ̀, ṣàpèjúwe ìfanimọ́ra tó ga ti ọ̀rọ̀ náà \"ikú.\""
+      },
+      {
+        "role": "user",
+        "content": "Full-length in Hausa"
+      },
+      {
+        "role": "assistant",
+        "content": "### Word:\nCikakken tsahi\n\n### Definition:\n• *Sifa*: Wanda ya kai ko ya yi tsayi gaba ɗaya; ba a rage ko taƙaita ba.\n• *Suna (a salon magana)*: Wando, fim, ko wani aikin da ya kai tsawon gaba ɗaya (misali, fim mai tsawon gaba ɗaya, riga mai tsawon gaba ɗaya).\n\n### Synonyms:\n• Cikakke\n• Gaba ɗaya\n• Ba a rage ba\n• Duka\n• Cikakken fahimta\n\n### Antonyms:\n• An rage\n• Bangare\n• An yanke\n• Ba cikakke ba\n• An taƙaita\n\n### Examples Usage:\n• Gidan kayan tarihi ya nuna hoton sarauniya mai *tsawon gaba ɗaya*.\n• Ta sayi riga mai *tsawon gaba ɗaya* don lokacin sanyi.\n• Mun kalli fayil ɗin bidiyo mai *tsawon gaba ɗaya* wanda ya ɗauki awanni biyu.\n• Darakta ya yanke shawarar sakin sigar *tsawon gaba ɗaya* maimakon sigar da aka ajiye.\n• Wasan kwaikwayo na makaranta an gudanar da shi cikin *tsawon gaba ɗaya*, tare da dukkanin shafuka.\n\n### Cultural Context:\nA cikin al'adun da ke magana da Turanci, 'cikakken tsawo' yawanci yana nufin fim na al'ada, ba dogon, mafi rikitarwa aikin fim ba.\n\n### Fun Fact:\nKalmar cikakken tsawo ta samo asali ne a cikin saka aikin gyaran jiki inda ta kai kafa ɗaya ta tsayu inda ta kai kafa ɗaya ta tsaya."
+      },
+      {
+        "role": "user",
+        "content": "${word} in ${language}"
+      }
+    ]
+  },
+  "ASR": {
+    "providers": {
+      "google": {
+        "system": "Generate an accurate transcript of the spoken audio. Return only the transcript, without commentary, labels, or formatting."
+      }
+    }
+  },
+  "LAB": {
+    "wordOfTheDay": {
+      "system": "You are Hypa Dictionary. Generate a random {selectedLanguage} word or phrase and define it.\n\n### Word:\n### Definition:",
+      "user": "Please provide a random word/phrase in {selectedLanguage}"
+    }
+  }
+}

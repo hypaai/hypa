@@ -1,6 +1,6 @@
 import type { PostHogLike } from "./analytics-client";
 
-export interface NativePostHogClient {
+interface NativePostHogClient {
   register(properties: Record<string, unknown>): void | Promise<void>;
   capture(event: string, properties?: Record<string, unknown>): void;
   identify(distinctId: string): void;

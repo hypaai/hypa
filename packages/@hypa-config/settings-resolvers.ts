@@ -1,6 +1,6 @@
 export const DEFAULT_MODEL_PROVIDER = "hypaai";
 
-export interface ProviderModel {
+interface ProviderModel {
   name: string;
   default?: boolean;
 }
@@ -10,7 +10,7 @@ export type ProviderMap<TModel extends ProviderModel = ProviderModel> = Record<
   TModel[]
 >;
 
-export function getProviderModelsFromProviderMap<TModel extends ProviderModel>(
+function getProviderModelsFromProviderMap<TModel extends ProviderModel>(
   providerMap: ProviderMap<TModel> | undefined,
   provider = DEFAULT_MODEL_PROVIDER,
 ): TModel[] {
@@ -31,7 +31,7 @@ export function resolveDefaultModelFromModels<TModel extends ProviderModel>(
   return models.find((model) => model.default) ?? models[0];
 }
 
-export function resolveDefaultModelFromProviderMap<
+function resolveDefaultModelFromProviderMap<
   TModel extends ProviderModel,
 >(
   providerMap: ProviderMap<TModel> | undefined,
@@ -50,3 +50,20 @@ export function resolveDefaultModelNameFromProviderMap<
 ): string {
   return resolveDefaultModelFromProviderMap(providerMap, provider)?.name ?? "";
 }
+
+export function resolveProviderForModelFromProviderMap<
+  TModel extends ProviderModel,
+>(
+  providerMap: ProviderMap<TModel> | undefined,
+  modelName: string,
+  fallback = "hypaai",
+): string {
+  if (!providerMap || !modelName) return fallback;
+
+  return (
+    Object.entries(providerMap).find(([, models]) =>
+      models.some((model) => model.name === modelName),
+    )?.[0] ?? fallback
+  );
+}
+

@@ -5,13 +5,23 @@
   "type": "module",
   "license": "MIT",
   "exports": {
-    "./metro": "./metro.cjs",
-    "./language-metadata": "./language-metadata.ts",
-    "./settings-resolvers": "./settings-resolvers.ts",
-    "./referral": "./referral.ts",
     "./analytics": "./analytics.ts",
     "./analytics-client": "./analytics-client.ts",
     "./analytics-native": "./analytics-native.ts",
-    "./models": "./models.ts"
+    "./auto-routing": "./auto-routing.ts",
+    "./google-models": "./google-models.ts",
+    "./her": "./her.ts",
+    "./json/error-codes": "./json/error-codes.json",
+    "./json/voices": "./json/voices.json",
+    "./language-metadata": "./language-metadata.ts",
+    "./legacy-models": "./legacy-models.ts",
+    "./metro": "./metro.cjs",
+    "./model-hosts": "./model-hosts.ts",
+    "./models": "./models.ts",
+    "./mt-pair-support": "./mt-pair-support.ts",
+    "./prompts": "./prompts.ts",
+    "./ranking": "./ranking.ts",
+    "./referral": "./referral.ts",
+    "./settings-resolvers": "./settings-resolvers.ts"
   }
 }

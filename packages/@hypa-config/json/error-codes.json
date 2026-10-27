@@ -1,0 +1,59 @@
+{
+  "INVALID_REQUEST": {
+    "reasons": [],
+    "message": "Your request could not be processed. Please review it and try again.",
+    "code": 10001
+  },
+  "INVALID_MODEL": {
+    "reasons": [],
+    "message": "The selected model is invalid or unavailable. Please choose another model and try again.",
+    "code": 10002
+  },
+  "INVALID_PROVIDER": {
+    "reasons": [],
+    "message": "The selected provider is not available for this request.",
+    "code": 10003
+  },
+  "MODEL_UNAVAILABLE": {
+    "reasons": [],
+    "message": "Hypa is currently experiencing high traffic. Please try again in 5 minutes.",
+    "code": 10004
+  },
+  "SERVICE_UNAVAILABLE": {
+    "reasons": [],
+    "message": "The service is temporarily unavailable. Please try again shortly.",
+    "code": 10005
+  },
+  "INCOMPLETE_RESPONSE": {
+    "reasons": [],
+    "message": "The provider returned an incomplete response. Please try again.",
+    "code": 10006
+  },
+  "INVALID_FORMAT": {
+    "reasons": [],
+    "message": "The request or response format is invalid. Please review it and try again.",
+    "code": 11007
+  },
+  "INVALID_LANGUAGE": {
+    "reasons": [],
+    "message": "The selected language is not supported for this request.",
+    "code": 10009
+  },
+  "INVALID_VOICE": {
+    "reasons": [],
+    "message": "The selected voice is not supported for this request.",
+    "code": 10010
+  },
+  "INSUFFICIENT_BALANCE": {
+    "reasons": [],
+    "message": "Your account balance is too low to complete this request.",
+    "code": 10011
+  },
+  "TOKEN_BUDGET_EXCEEDED": {
+    "reasons": [
+      "The text plus the requested max_tokens exceeds the model's 4096-token context window. Lower max_tokens or shorten the text."
+    ],
+    "message": "The text is too long to read aloud in one go. Try a shorter passage.",
+    "code": 10014
+  }
+}

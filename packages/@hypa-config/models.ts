@@ -15,40 +15,33 @@ export interface ModelRate {
   voiceEnrollmentFee?: number;
 }
 
-export interface ModelDefinition {
+interface ModelDefinition {
   name: string;
   displayName?: string;
   capabilities: ModelCapability[];
   defaults?: ModelCapability[];
   baseApiUrl?: string;
-  modelCardUrl?: string;
   languages: string[];
   rates: ModelRate[];
   reasoning?: boolean;
   reasoningEffort?: string;
   fixedTemperature?: number;
-  openingThinkTag?: string | null;
-  closingThinkTag?: string | null;
-  contextWindow?: number;
-  placeholders?: string[];
   voices?: Record<string, string[]>;
   celebrityVoices?: string[];
   apiKeyEnv?: string;
   servedModelName?: string;
   timeoutMs?: number;
   requiresSourceLanguage?: boolean;
-  notes?: string;
-  tools?: boolean;
 }
 
 export type ModelsByProvider = Record<string, ModelDefinition[]>;
 export type CapabilityModel = ModelDefinition & { default: boolean };
-export type ModelOption = CapabilityModel & { languageCodes: string[] };
+type ModelOption = CapabilityModel & { languageCodes: string[] };
 export type CapabilityMap<T> = Record<ModelCapability, Record<string, T[]>>;
 
-export const MODELS = catalog.models as ModelsByProvider;
+const MODELS = catalog.models as ModelsByProvider;
 
-export function getLanguageName(code: string): string {
+function getLanguageName(code: string): string {
   const name = (languageNames as Record<string, string>)[code];
   if (!name) throw new Error(`Unknown model language code: ${code}`);
   return name;
@@ -67,7 +60,7 @@ export function getModelLanguageOptions(
   return { languages: languageCodes.map(getLanguageName), languageCodes };
 }
 
-export function groupModelsByCapability(models: ModelsByProvider): CapabilityMap<CapabilityModel> {
+function groupModelsByCapability(models: ModelsByProvider): CapabilityMap<CapabilityModel> {
   const result = Object.fromEntries(CAPABILITIES.map((capability) => [capability, {}])) as CapabilityMap<CapabilityModel>;
   for (const [provider, entries] of Object.entries(models)) {
     for (const entry of entries) {
@@ -88,7 +81,7 @@ export function isContributorModel(provider: string, model: string): boolean {
   return provider === "meta" && model.endsWith("-contributor");
 }
 
-export const PRODUCT_MODELS_BY_CAPABILITY = groupModelsByCapability(
+const PRODUCT_MODELS_BY_CAPABILITY = groupModelsByCapability(
   Object.fromEntries(Object.entries(MODELS).map(([provider, models]) => [
     provider,
     models.filter((model) => !isContributorModel(provider, model.name)),
@@ -150,3 +143,15 @@ function withAutoRouter(options: CapabilityMap<ModelOption>): CapabilityMap<Mode
 
 export const MODEL_OPTIONS_BY_CAPABILITY = withAutoRouter(modelOptions(MODELS_BY_CAPABILITY));
 export const PRODUCT_MODEL_OPTIONS_BY_CAPABILITY = withAutoRouter(modelOptions(PRODUCT_MODELS_BY_CAPABILITY));
+
+export function getModelRate(model: ModelDefinition, capability: ModelCapability): ModelRate {
+  const matches = model.rates.filter((rate) => rate.capabilities.includes(capability));
+  if (!model.capabilities.includes(capability) || matches.length !== 1) {
+    throw new Error(`${model.name}: expected exactly one rate for ${capability}`);
+  }
+  return matches[0];
+}
+
+export function isStreamingModel(model?: { baseApiUrl?: string } | null): boolean {
+  return /^wss?:\/\//i.test(model?.baseApiUrl ?? "");
+}

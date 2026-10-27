@@ -3,8 +3,6 @@ import {
   MODELS_BY_CAPABILITY as modelsJson,
   supportsExplanation,
 } from "@hypa/config/models";
-import { hydrateTranslationThinking } from "./thinking";
-
 export { attachThinking, parseTranslation } from "./thinking";
 
 type ModelGroup = "AC" | "MT" | "TTS" | "ASR" | "OCR";
@@ -33,7 +31,7 @@ export const hasThinking = (modelName?: string) => {
   );
 };
 
-export const normalizeVoice = (voice?: string, fallback = "Juliet") =>
+const normalizeVoice = (voice?: string, fallback = "Juliet") =>
   !voice || voice.toLowerCase().trim() === "auto" ? fallback : voice;
 
 const findProviderForModel = (
@@ -52,7 +50,7 @@ const findProviderForModel = (
   return undefined;
 };
 
-export const getProvider = (
+const getProvider = (
   modelName: string | undefined,
   fallback: string,
   group: ModelGroup,
@@ -102,10 +100,10 @@ export const TRANSLATE_ENDPOINTS = {
 export const createTranslationId = () =>
   `translation-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-export const stripDataUrl = (value: string) =>
+const stripDataUrl = (value: string) =>
   value.includes(",") ? value.split(",").pop() || value : value;
 
-export const extractDataUrlMimeType = (value: string): string | undefined => {
+const extractDataUrlMimeType = (value: string): string | undefined => {
   const match = /^data:([^;,]+)/.exec(value);
   return match?.[1];
 };
@@ -120,10 +118,10 @@ export const isAutoDetectLanguage = (value?: string | null) => {
   );
 };
 
-export const normalizeSourceLanguage = (sourceLang?: string) =>
+const normalizeSourceLanguage = (sourceLang?: string) =>
   isAutoDetectLanguage(sourceLang) ? undefined : sourceLang?.trim();
 
-export const resolveThinkingSourceLanguage = (
+const resolveThinkingSourceLanguage = (
   sourceLang?: string | null,
   detectedLanguage?: string | null,
   fallback = "English",
@@ -137,7 +135,7 @@ export const resolveThinkingSourceLanguage = (
   return fallback;
 };
 
-export interface TranslateAPIParams {
+interface TranslateAPIParams {
   targetLang: string;
   text: string;
   sourceLang?: string;
@@ -145,7 +143,7 @@ export interface TranslateAPIParams {
   thinkingMode?: boolean;
 }
 
-export interface TranslateAPIResponse {
+interface TranslateAPIResponse {
   translation: string;
   language: string | null;
   id?: string | null;
@@ -250,13 +248,13 @@ export const mapMtResponse = (
   };
 };
 
-export interface TextToSpeechAPIParams {
+interface TextToSpeechAPIParams {
   text: string;
   voice: string;
   ttsModel?: string;
 }
 
-export interface TextToSpeechAPIResponse {
+interface TextToSpeechAPIResponse {
   audio_b64: string;
   audio_sample?: number[];
   sample_rate?: number;
@@ -457,7 +455,7 @@ const readSseEvents = (responseText: string) => {
   return events;
 };
 
-export const getMtSseError = (responseText: string) => {
+const getMtSseError = (responseText: string) => {
   const errorEvent = readSseEvents(responseText).find(
     (event) => event.event === "error",
   );
@@ -471,7 +469,7 @@ export const getMtSseError = (responseText: string) => {
   return rawMessage;
 };
 
-export const handleMtEndpointResponse = (responseText: string) => {
+const handleMtEndpointResponse = (responseText: string) => {
   const trimmed = responseText.trim();
   const sseError = getMtSseError(trimmed);
   if (sseError) throw new Error(sseError);

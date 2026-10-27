@@ -66,23 +66,7 @@
           "zh"
         ],
         "baseApiUrl": "https://api.openai.com/v1/chat/completions",
-        "modelCardUrl": "https://platform.openai.com/docs/models/gpt-4.1-nano",
         "reasoning": false,
-        "openingThinkTag": null,
-        "closingThinkTag": null,
-        "contextWindow": 1047576,
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo ìrọ̀lẹ, àwọn aja ni àdúùgbò wa n pa aríwo.",
-          "Igbo: Mgbede ọ bụla, nkịta ndị nọ n'agbata obi anyị na-ebe ákwá.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet — again.",
-          "Yoruba: Ó ti tó àkókò láti tọjú Íńtánẹ́ẹ̀tì — lẹ́ẹ̀kan sí i.",
-          "Igbo: Oge eruola ịzọpụta ỊntanetỊ — ọzọ.",
-          "Hausa: Lokaci ya yi don ceton intanet — akai.",
-          "English: The End!"
-        ],
         "rates": [
           {
             "capabilities": [
@@ -157,25 +141,9 @@
           "zh"
         ],
         "baseApiUrl": "https://api.openai.com/v1/chat/completions",
-        "modelCardUrl": "https://platform.openai.com/docs/models/gpt-5.6-sol",
         "reasoning": false,
         "fixedTemperature": 1,
         "reasoningEffort": "none",
-        "openingThinkTag": null,
-        "closingThinkTag": null,
-        "contextWindow": 1050000,
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo ìrọ̀lẹ, àwọn aja ni àdúùgbò wa n pa aríwo.",
-          "Igbo: Mgbede ọ bụla, nkịta ndị nọ n'agbata obi anyị na-ebe ákwá.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet — again.",
-          "Yoruba: Ó ti tó àkókò láti tọjú Íńtánẹ́ẹ̀tì — lẹ́ẹ̀kan sí i.",
-          "Igbo: Oge eruola ịzọpụta ỊntanetỊ — ọzọ.",
-          "Hausa: Lokaci ya yi don ceton intanet — akai.",
-          "English: The End!"
-        ],
         "rates": [
           {
             "capabilities": [
@@ -250,25 +218,9 @@
           "zh"
         ],
         "baseApiUrl": "https://api.openai.com/v1/chat/completions",
-        "modelCardUrl": "https://platform.openai.com/docs/models/gpt-5.6-terra",
         "reasoning": false,
         "fixedTemperature": 1,
         "reasoningEffort": "none",
-        "openingThinkTag": null,
-        "closingThinkTag": null,
-        "contextWindow": 1050000,
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo ìrọ̀lẹ, àwọn aja ni àdúùgbò wa n pa aríwo.",
-          "Igbo: Mgbede ọ bụla, nkịta ndị nọ n'agbata obi anyị na-ebe ákwá.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet — again.",
-          "Yoruba: Ó ti tó àkókò láti tọjú Íńtánẹ́ẹ̀tì — lẹ́ẹ̀kan sí i.",
-          "Igbo: Oge eruola ịzọpụta ỊntanetỊ — ọzọ.",
-          "Hausa: Lokaci ya yi don ceton intanet — akai.",
-          "English: The End!"
-        ],
         "rates": [
           {
             "capabilities": [
@@ -343,25 +295,9 @@
           "zh"
         ],
         "baseApiUrl": "https://api.openai.com/v1/chat/completions",
-        "modelCardUrl": "https://platform.openai.com/docs/models/gpt-5.6-luna",
         "reasoning": false,
         "fixedTemperature": 1,
         "reasoningEffort": "none",
-        "openingThinkTag": null,
-        "closingThinkTag": null,
-        "contextWindow": 1050000,
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo ìrọ̀lẹ, àwọn aja ni àdúùgbò wa n pa aríwo.",
-          "Igbo: Mgbede ọ bụla, nkịta ndị nọ n'agbata obi anyị na-ebe ákwá.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet — again.",
-          "Yoruba: Ó ti tó àkókò láti tọjú Íńtánẹ́ẹ̀tì — lẹ́ẹ̀kan sí i.",
-          "Igbo: Oge eruola ịzọpụta ỊntanetỊ — ọzọ.",
-          "Hausa: Lokaci ya yi don ceton intanet — akai.",
-          "English: The End!"
-        ],
         "rates": [
           {
             "capabilities": [
@@ -436,24 +372,8 @@
           "zh"
         ],
         "baseApiUrl": "https://api.openai.com/v1/chat/completions",
-        "modelCardUrl": "https://developers.openai.com/api/docs/models/gpt-6-astra",
         "reasoning": false,
         "reasoningEffort": "low",
-        "openingThinkTag": null,
-        "closingThinkTag": null,
-        "contextWindow": 1050000,
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo ìrọ̀lẹ, àwọn aja ni àdúùgbò wa n pa aríwo.",
-          "Igbo: Mgbede ọ bụla, nkịta ndị nọ n'agbata obi anyị na-ebe ákwá.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet — again.",
-          "Yoruba: Ó ti tó àkókò láti tọjú Íńtánẹ́ẹ̀tì — lẹ́ẹ̀kan sí i.",
-          "Igbo: Oge eruola ịzọpụta ỊntanetỊ — ọzọ.",
-          "Hausa: Lokaci ya yi don ceton intanet — akai.",
-          "English: The End!"
-        ],
         "rates": [
           {
             "capabilities": [
@@ -531,22 +451,7 @@
           "zh"
         ],
         "baseApiUrl": "https://api.openai.com/v1/chat/completions",
-        "modelCardUrl": "https://platform.openai.com/docs/models/gpt-4o-mini",
         "reasoning": false,
-        "openingThinkTag": null,
-        "closingThinkTag": null,
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo ìrọ̀lẹ, àwọn aja ni àdúùgbò wa n pa aríwo.",
-          "Igbo: Mgbede ọ bụla, nkịta ndị nọ n'agbata obi anyị na-ebe ákwá.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet — again.",
-          "Yoruba: Ó ti tó àkókò láti tọjú Íńtánẹ́ẹ̀tì — lẹ́ẹ̀kan sí i.",
-          "Igbo: Oge eruola ịzọpụta ỊntanetỊ — ọzọ.",
-          "Hausa: Lokaci ya yi don ceton intanet — akai.",
-          "English: The End!"
-        ],
         "rates": [
           {
             "capabilities": [
@@ -621,24 +526,9 @@
           "zh"
         ],
         "baseApiUrl": "https://api.openai.com/v1/chat/completions",
-        "modelCardUrl": "https://platform.openai.com/docs/models/gpt-5-nano",
         "reasoning": false,
         "fixedTemperature": 1,
         "reasoningEffort": "minimal",
-        "openingThinkTag": null,
-        "closingThinkTag": null,
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo ìrọ̀lẹ, àwọn aja ni àdúùgbò wa n pa aríwo.",
-          "Igbo: Mgbede ọ bụla, nkịta ndị nọ n'agbata obi anyị na-ebe ákwá.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet — again.",
-          "Yoruba: Ó ti tó àkókò láti tọjú Íńtánẹ́ẹ̀tì — lẹ́ẹ̀kan sí i.",
-          "Igbo: Oge eruola ịzọpụta ỊntanetỊ — ọzọ.",
-          "Hausa: Lokaci ya yi don ceton intanet — akai.",
-          "English: The End!"
-        ],
         "rates": [
           {
             "capabilities": [
@@ -671,7 +561,6 @@
           "tv"
         ],
         "baseApiUrl": "https://api.openai.com/v1/audio/speech",
-        "modelCardUrl": "https://platform.openai.com/docs/models/gpt-4o-mini-tts",
         "voices": {
           "english": [
             "alloy",
@@ -809,7 +698,6 @@
             "cedar"
           ]
         },
-        "notes": "This model is hosted by OpenAI",
         "rates": [
           {
             "capabilities": [
@@ -839,7 +727,6 @@
           "tv"
         ],
         "baseApiUrl": "https://api.openai.com/v1/audio/speech",
-        "modelCardUrl": "https://platform.openai.com/docs/models/tts-1",
         "voices": {
           "english": [
             "alloy",
@@ -941,7 +828,6 @@
             "shimmer"
           ]
         },
-        "notes": "This model is hosted by OpenAI",
         "rates": [
           {
             "capabilities": [
@@ -970,7 +856,6 @@
           "tv"
         ],
         "baseApiUrl": "https://api.openai.com/v1/audio/speech",
-        "modelCardUrl": "https://platform.openai.com/docs/models/tts-1-hd",
         "voices": {
           "english": [
             "alloy",
@@ -1072,7 +957,6 @@
             "shimmer"
           ]
         },
-        "notes": "This model is hosted by OpenAI",
         "rates": [
           {
             "capabilities": [
@@ -1118,7 +1002,6 @@
           "urh"
         ],
         "baseApiUrl": "https://api.openai.com/v1/audio/transcriptions",
-        "modelCardUrl": "https://platform.openai.com/docs/models/gpt-4o-mini-transcribe",
         "rates": [
           {
             "capabilities": [
@@ -1163,7 +1046,6 @@
           "urh"
         ],
         "baseApiUrl": "https://api.openai.com/v1/audio/transcriptions",
-        "modelCardUrl": "https://platform.openai.com/docs/models/whisper-1",
         "rates": [
           {
             "capabilities": [
@@ -1207,7 +1089,6 @@
           "yo"
         ],
         "baseApiUrl": "https://api.openai.com/v1/audio/transcriptions",
-        "modelCardUrl": "https://platform.openai.com/docs/models/gpt-4o-transcribe",
         "rates": [
           {
             "capabilities": [
@@ -1252,7 +1133,6 @@
           "yo"
         ],
         "baseApiUrl": "https://api.openai.com/v1/audio/transcriptions",
-        "modelCardUrl": "https://platform.openai.com/docs/models/gpt-transcribe",
         "rates": [
           {
             "capabilities": [
@@ -1296,7 +1176,6 @@
           "yo"
         ],
         "baseApiUrl": "https://api.openai.com/v1/audio/transcriptions",
-        "modelCardUrl": "https://platform.openai.com/docs/models/gpt-4o-transcribe-diarize",
         "rates": [
           {
             "capabilities": [
@@ -1315,8 +1194,6 @@
         "defaults": [],
         "languages": [],
         "baseApiUrl": "https://api.openai.com/v1/chat/completions",
-        "modelCardUrl": "https://openai.com/index/openai-o4-mini/",
-        "notes": "OpenAI's o4-mini model used for extracting text from images via vision API. Requires OPENAI_API_KEY environment variable.",
         "rates": [
           {
             "capabilities": [
@@ -1367,70 +1244,7 @@
           "yo"
         ],
         "baseApiUrl": "https://hb451scbmvzenc8e.endpoints.huggingface.cloud/v1/chat/completions",
-        "modelCardUrl": "https://huggingface.co/hypaai/Hypa-Llama3.1-8b-SFT",
         "reasoning": true,
-        "openingThinkTag": "<think>",
-        "closingThinkTag": "</think>",
-        "contextWindow": 128000,
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Annang: Kwa ndubi Ewa nkan nkuk nnyin eboñ mkpo.",
-          "Ebira: Oruva oruva irezi enẹhi inokokoro dị a nowu.",
-          "Efik: Kprukpru mbubreyo, mme ebua ke nkannkuk nnyin enam uyom.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "Ibibio: Kwa nbubi mme ewa ke nkan-nkʌk nyin ena ekpọi.",
-          "Idoma: Onee doodu a'ewo ega nalo'lanya eyi-fonu.",
-          "Igala: Égbá ánẹ́ dú, ámì Ábíá kùmá dì ákworá ùnyi wá Ákọ́.",
-          "Igbo: Mgbede ọ bụla, nkịta ndị nọ n'agbata obi anyị na-ebe ákwá.",
-          "Tiv: Hanma aikie yô aniywaav mba hen diô-ya wase mba lu vaan.",
-          "Yoruba: Gbogbo ìrọ̀lẹ, àwọn aja ni àdúùgbò wa n pa aríwo.",
-          "English: It's time to save the internet — again.",
-          "Annang: Agwō ini ndi nim internet — amana.",
-          "Efik: Ekem ini man anyan̄a internet ndifiak - nnam.",
-          "Hausa: Lokaci ya yi don ceton intanet — akai.",
-          "Ibibio: Amana-kemini adi yaña internet.",
-          "Idoma: Eko gaa ee k'oheta ku internet — kpo.",
-          "Igala: Iko ke gbi intaneti dàbi le yá mè.",
-          "Igbo: Oge eruola ịzọpụta Ịntanetị — ọzọ.",
-          "Tiv: Ka shie u shi yiman intanet.",
-          "Yoruba: Ó ti tó àkókò láti tọjú Íńtánẹ́ẹ̀tì — lẹ́ẹ̀kan sí i.",
-          "English: The End!",
-          "Annang: Kwa nduwi, mme ewa ke mbók ilóng ajid eche ebóngó mkpo.",
-          "English: A donor has since been found.",
-          "Annang: Akpene eke ekud agwo unó unwam.",
-          "Arabic: كل مساء، الكلاب في حيّنا تُعوي.",
-          "Arabic: قد تم العثور على متبرع منذ ذلك الحين.",
-          "Ebira: Erere osiyoza hurumorumo.",
-          "Efik: Ema ekut ono owo nkpọ.",
-          "Eggon: Omba yŋa mbo la onmuore, ebu lo a òkó dzu ma gyi mo la srmo.",
-          "Eggon: Are la si o kpo kko di mo hwyne yŋa ba mumi.",
-          "French: Chaque soir, les chiens dans notre quartier hurlent.",
-          "French: Un donneur a depuis été trouvé.",
-          "Hausa: Wani mai bayar da jini an sami shi tun danzu.",
-          "Ibibio: Ema ekekid awo se ibinọ",
-          "Idoma: Oce je ehi, eloo'ma gboji ee.",
-          "Igala: Ádèbie lẹ, Máláfuyè kpó kpẹ mẹ.",
-          "Igbo: Achọtala onye na-enye aka kemgbe.",
-          "English: Woodbury Heights is governed under the Borough form of New Jersey municipal government.",
-          "Nupe: Woodbury Heights wun a de kangi dan gwata miye Borough o nya New Jersey eka kintetengi o.",
-          "English: It is proposed to have an entire floor for free and subsidised in-patient beds.",
-          "Nupe: Emingan ebo wo de kin kpata efya toh kike dan ekpata gunci o.",
-          "Spanish: Woodbury Heights está gobernado bajo la forma de Borough del gobierno municipal de Nueva Jersey.",
-          "Spanish: Se propone tener un piso entero gratuito y subvencionado con camas de hospital.",
-          "Swahili: Woodbury Heights inatawaliwa chini ya mfumo wa mtaa wa manispaa ya New Jersey.",
-          "Swahili: Pendekezo ni kuwa na sakafu nzima ya vitanda vya wagonjwa wa kulazwa visivyolipishwa na vilivyopunguzwa bei.",
-          "Tiv: Hanma aikie yô aniywaav mba hen vegher-geri wase mba lu vaan.",
-          "Tiv: I zua a or u nan ica gba.",
-          "Twi: Woodbury Heights wɔbu no hyɛ Borough kwan so wɔ New Jersey amammuo mu.",
-          "English: A map is classified as small scale or large scale or sometimes medium scale.",
-          "Twi: Yɛakyekyɛ maapo mu susudua ketewa anaa susudua kɛseɛ anaasɛ ɛtɔ mmerɛ bi a yɛfrɛ no adantamu susudua.",
-          "Yoruba: A ti ri Olùfúnni kan báyìí.",
-          "Portuguese: Woodbury Heights é governada sob a forma de Borough do governo municipal de Nova Jersey.",
-          "Portuguese: Um mapa é classificado como em pequena escala, em grande escala ou às vezes em escala média.",
-          "Fongbe: Gbadanu tɛgbɛ ɔ avoun lɛ nɔn do hihó wè.",
-          "Fongbe: New York hwe enɛn nú ɔ húzú afɔ sɔ dó té daxo sin sá tɔ daxo lɛ tɔn."
-        ],
         "rates": [
           {
             "capabilities": [
@@ -1477,74 +1291,10 @@
           "yo"
         ],
         "baseApiUrl": "https://api.runpod.ai/v2/drdbl2gq5vst0r/openai/v1/chat/completions",
-        "modelCardUrl": "https://huggingface.co/hypaai/Hypa-Llama3.1-8b-SFT",
         "apiKeyEnv": "RUNPOD_API_KEY",
         "servedModelName": "hypaai/Hypa-Llama3.1-8b-SFT",
         "timeoutMs": 180000,
-        "notes": "Same weights as Hypa-Llama3.1-8b-SFT, hosted on RunPod Serverless.",
         "reasoning": true,
-        "openingThinkTag": "<think>",
-        "closingThinkTag": "</think>",
-        "contextWindow": 128000,
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Annang: Kwa ndubi Ewa nkan nkuk nnyin eboñ mkpo.",
-          "Ebira: Oruva oruva irezi enẹhi inokokoro dị a nowu.",
-          "Efik: Kprukpru mbubreyo, mme ebua ke nkannkuk nnyin enam uyom.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "Ibibio: Kwa nbubi mme ewa ke nkan-nkʌk nyin ena ekpọi.",
-          "Idoma: Onee doodu a'ewo ega nalo'lanya eyi-fonu.",
-          "Igala: Égbá ánẹ́ dú, ámì Ábíá kùmá dì ákworá ùnyi wá Ákọ́.",
-          "Igbo: Mgbede ọ bụla, nkịta ndị nọ n'agbata obi anyị na-ebe ákwá.",
-          "Tiv: Hanma aikie yô aniywaav mba hen diô-ya wase mba lu vaan.",
-          "Yoruba: Gbogbo ìrọ̀lẹ, àwọn aja ni àdúùgbò wa n pa aríwo.",
-          "English: It's time to save the internet — again.",
-          "Annang: Agwō ini ndi nim internet — amana.",
-          "Efik: Ekem ini man anyan̄a internet ndifiak - nnam.",
-          "Hausa: Lokaci ya yi don ceton intanet — akai.",
-          "Ibibio: Amana-kemini adi yaña internet.",
-          "Idoma: Eko gaa ee k'oheta ku internet — kpo.",
-          "Igala: Iko ke gbi intaneti dàbi le yá mè.",
-          "Igbo: Oge eruola ịzọpụta Ịntanetị — ọzọ.",
-          "Tiv: Ka shie u shi yiman intanet.",
-          "Yoruba: Ó ti tó àkókò láti tọjú Íńtánẹ́ẹ̀tì — lẹ́ẹ̀kan sí i.",
-          "English: The End!",
-          "Annang: Kwa nduwi, mme ewa ke mbók ilóng ajid eche ebóngó mkpo.",
-          "English: A donor has since been found.",
-          "Annang: Akpene eke ekud agwo unó unwam.",
-          "Arabic: كل مساء، الكلاب في حيّنا تُعوي.",
-          "Arabic: قد تم العثور على متبرع منذ ذلك الحين.",
-          "Ebira: Erere osiyoza hurumorumo.",
-          "Efik: Ema ekut ono owo nkpọ.",
-          "Eggon: Omba yŋa mbo la onmuore, ebu lo a òkó dzu ma gyi mo la srmo.",
-          "Eggon: Are la si o kpo kko di mo hwyne yŋa ba mumi.",
-          "French: Chaque soir, les chiens dans notre quartier hurlent.",
-          "French: Un donneur a depuis été trouvé.",
-          "Hausa: Wani mai bayar da jini an sami shi tun danzu.",
-          "Ibibio: Ema ekekid awo se ibinọ",
-          "Idoma: Oce je ehi, eloo'ma gboji ee.",
-          "Igala: Ádèbie lẹ, Máláfuyè kpó kpẹ mẹ.",
-          "Igbo: Achọtala onye na-enye aka kemgbe.",
-          "English: Woodbury Heights is governed under the Borough form of New Jersey municipal government.",
-          "Nupe: Woodbury Heights wun a de kangi dan gwata miye Borough o nya New Jersey eka kintetengi o.",
-          "English: It is proposed to have an entire floor for free and subsidised in-patient beds.",
-          "Nupe: Emingan ebo wo de kin kpata efya toh kike dan ekpata gunci o.",
-          "Spanish: Woodbury Heights está gobernado bajo la forma de Borough del gobierno municipal de Nueva Jersey.",
-          "Spanish: Se propone tener un piso entero gratuito y subvencionado con camas de hospital.",
-          "Swahili: Woodbury Heights inatawaliwa chini ya mfumo wa mtaa wa manispaa ya New Jersey.",
-          "Swahili: Pendekezo ni kuwa na sakafu nzima ya vitanda vya wagonjwa wa kulazwa visivyolipishwa na vilivyopunguzwa bei.",
-          "Tiv: Hanma aikie yô aniywaav mba hen vegher-geri wase mba lu vaan.",
-          "Tiv: I zua a or u nan ica gba.",
-          "Twi: Woodbury Heights wɔbu no hyɛ Borough kwan so wɔ New Jersey amammuo mu.",
-          "English: A map is classified as small scale or large scale or sometimes medium scale.",
-          "Twi: Yɛakyekyɛ maapo mu susudua ketewa anaa susudua kɛseɛ anaasɛ ɛtɔ mmerɛ bi a yɛfrɛ no adantamu susudua.",
-          "Yoruba: A ti ri Olùfúnni kan báyìí.",
-          "Portuguese: Woodbury Heights é governada sob a forma de Borough do governo municipal de Nova Jersey.",
-          "Portuguese: Um mapa é classificado como em pequena escala, em grande escala ou às vezes em escala média.",
-          "Fongbe: Gbadanu tɛgbɛ ɔ avoun lɛ nɔn do hihó wè.",
-          "Fongbe: New York hwe enɛn nú ɔ húzú afɔ sɔ dó té daxo sin sá tɔ daxo lɛ tɔn."
-        ],
         "rates": [
           {
             "capabilities": [
@@ -1591,36 +1341,7 @@
           "urh"
         ],
         "baseApiUrl": "https://m35sn4lizhvy1v19.endpoints.huggingface.cloud/v1/chat/completions",
-        "modelCardUrl": "https://huggingface.co/hypaai/Hypa_Llama3.2-8b-SFT-2025-12-20_II-16bit",
         "reasoning": true,
-        "openingThinkTag": "<think>",
-        "closingThinkTag": "</think>",
-        "contextWindow": 128000,
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Annang: Kwa ndubi Ewa nkan nkuk nnyin eboñ mkpo.",
-          "Ebira: Oruva oruva irezi enẹhi inokokoro dị a nowu.",
-          "Efik: Kprukpru mbubreyo, mme ebua ke nkannkuk nnyin enam uyom.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "Ibibio: Kwa nbubi mme ewa ke nkan-nkʌk nyin ena ekpọi.",
-          "Idoma: Onee doodu a'ewo ega nalo'lanya eyi-fonu.",
-          "Igala: Égbá ánẹ́ dú, ámì Ábíá kùmá dì ákworá ùnyi wá Ákọ́.",
-          "Igbo: Mgbede ọ bụla, nkịta ndị nọ n'agbata obi anyị na-ebe ákwá.",
-          "Tiv: Hanma aikie yô aniywaav mba hen diô-ya wase mba lu vaan.",
-          "Yoruba: Gbogbo ìrọ̀lẹ, àwọn aja ni àdúùgbò wa n pa aríwo.",
-          "English: It's time to save the internet — again.",
-          "Annang: Agwō ini ndi nim internet — amana.",
-          "Efik: Ekem ini man anyan̄a internet ndifiak - nnam.",
-          "Hausa: Lokaci ya yi don ceton intanet — akai.",
-          "Ibibio: Amana-kemini adi yaña internet.",
-          "Idoma: Eko gaa ee k'oheta ku internet — kpo.",
-          "Igala: Iko ke gbi intaneti dàbi le yá mè.",
-          "Igbo: Oge eruola ịzọpụta Ịntanetị — ọzọ.",
-          "Tiv: Ka shie u shi yiman intanet.",
-          "Yoruba: Ó ti tó àkókò láti tọjú Íńtánẹ́ẹ̀tì — lẹ́ẹ̀kan sí i.",
-          "English: The End!"
-        ],
         "rates": [
           {
             "capabilities": [
@@ -1667,7 +1388,6 @@
           "yo"
         ],
         "baseApiUrl": "https://bto7kpb5td8k1n6z.endpoints.huggingface.cloud",
-        "modelCardUrl": "https://huggingface.co/hypaai/Hypa-Orpheus-3b-TTS-VC",
         "voices": {
           "annang": [
             "Deborah",
@@ -1848,7 +1568,6 @@
           "Very Dark Man",
           "Odumeje"
         ],
-        "notes": "Default hypaai TTS model. Orpheus 3B voice-cloning endpoint with the step-28821 voice roster minus Lovelyn, legacy _old voices, and Yoruba Daniel; Prince is included for Igbo. Celebrity voices unchanged.",
         "rates": [
           {
             "capabilities": [
@@ -1893,7 +1612,6 @@
           "yo"
         ],
         "baseApiUrl": "https://api.runpod.ai/v2/8u5336r7as222f",
-        "modelCardUrl": "https://huggingface.co/hypaai/Hypa-Orpheus-3b-TTS-VC",
         "voices": {
           "annang": [
             "Deborah",
@@ -2074,7 +1792,6 @@
           "Very Dark Man",
           "Odumeje"
         ],
-        "notes": "Same weights as Hypa-Orpheus-3b-TTS-VC, hosted on RunPod Serverless (queue).",
         "rates": [
           {
             "capabilities": [
@@ -2119,7 +1836,6 @@
           "yo"
         ],
         "baseApiUrl": "https://d35u4rj8frd3grx3.endpoints.huggingface.cloud",
-        "modelCardUrl": "https://huggingface.co/hypaai/Hypa-Orpheus-3b-TTS-VC-ext",
         "voices": {
           "annang": [
             "Deborah",
@@ -2300,7 +2016,6 @@
           "Very Dark Man",
           "Odumeje"
         ],
-        "notes": "Experimental Orpheus 3B TTS-VC-ext endpoint. Same voice roster and celebrity voices as Hypa-Orpheus-3b-TTS-VC.",
         "rates": [
           {
             "capabilities": [
@@ -2331,7 +2046,6 @@
           "yo"
         ],
         "baseApiUrl": "https://beq8oey4esrohnh4.endpoints.huggingface.cloud",
-        "modelCardUrl": "https://huggingface.co/hypaai/hypaai_orpheus_v5",
         "voices": {
           "annang": [
             "Utibeima",
@@ -2393,7 +2107,6 @@
           "Very Dark Man",
           "Odumeje"
         ],
-        "notes": "This model is hosted by Chris. It has the updated handler.py file and supports cloning and new languages (Annang, efik, Ibibio...)",
         "rates": [
           {
             "capabilities": [
@@ -2441,7 +2154,6 @@
           "yo"
         ],
         "baseApiUrl": "https://x104vlddzo14u281.endpoints.huggingface.cloud",
-        "modelCardUrl": "https://huggingface.co/hypaai/wspr_small_2025-11-11_12-12-17",
         "rates": [
           {
             "capabilities": [
@@ -2485,10 +2197,8 @@
           "yo"
         ],
         "baseApiUrl": "https://api.runpod.ai/v2/2bcz728zbnu7lm",
-        "modelCardUrl": "https://huggingface.co/hypaai/wspr_small_2025-11-11_12-12-17",
         "apiKeyEnv": "RUNPOD_API_KEY",
         "timeoutMs": 180000,
-        "notes": "Same weights as Hypa-Whisper-V2, hosted on RunPod Serverless (queue).",
         "rates": [
           {
             "capabilities": [
@@ -2532,7 +2242,6 @@
           "urh"
         ],
         "baseApiUrl": "https://vssxgs6iq4dfwwbh.endpoints.huggingface.cloud",
-        "modelCardUrl": "https://huggingface.co/hypaai/hypaai-whisper-base-v1-04292025",
         "rates": [
           {
             "capabilities": [
@@ -2576,9 +2285,7 @@
           "yo"
         ],
         "baseApiUrl": "wss://hmshy7cet3w19t.api.runpod.ai/ws",
-        "modelCardUrl": "https://huggingface.co/hypaai/wspr_small_2025-11-11_12-12-17",
         "apiKeyEnv": "RUNPOD_API_KEY",
-        "notes": "RunPod Load Balancer streaming ASR. The api key is the RunPod account bearer, and the /ws route only serves live WebSocket sessions: this row is valid for Live Transcribe and rejected by the HTTP ASR endpoint.",
         "rates": [
           {
             "capabilities": [
@@ -2700,23 +2407,7 @@
           "zh"
         ],
         "baseApiUrl": "https://router.huggingface.co/v1/chat/completions",
-        "modelCardUrl": "https://huggingface.co/google/gemma-4-31B-it",
         "reasoning": true,
-        "openingThinkTag": "<think>",
-        "closingThinkTag": "</think>",
-        "contextWindow": 262144,
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo ìrọ̀lẹ, àwọn aja ni àdúùgbò wa n pa aríwo.",
-          "Igbo: Mgbede ọ bụla, nkịta ndị nọ n'agbata obi anyị na-ebe ákwá.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet — again.",
-          "Yoruba: Ó ti tó àkókò láti tọjú Íńtánẹ́ẹ̀tì — lẹ́ẹ̀kan sí i.",
-          "Igbo: Oge eruola ịzọpụta ỊntanetỊ — ọzọ.",
-          "Hausa: Lokaci ya yi don ceton intanet — akai.",
-          "English: The End!"
-        ],
         "rates": [
           {
             "capabilities": [
@@ -2781,23 +2472,7 @@
           "zh"
         ],
         "baseApiUrl": "https://router.huggingface.co/v1/chat/completions",
-        "modelCardUrl": "https://huggingface.co/google/gemma-4-26B-A4B-it",
         "reasoning": true,
-        "openingThinkTag": "<think>",
-        "closingThinkTag": "</think>",
-        "contextWindow": 262144,
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo ìrọ̀lẹ, àwọn aja ni àdúùgbò wa n pa aríwo.",
-          "Igbo: Mgbede ọ bụla, nkịta ndị nọ n'agbata obi anyị na-ebe ákwá.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet — again.",
-          "Yoruba: Ó ti tó àkókò láti tọjú Íńtánẹ́ẹ̀tì — lẹ́ẹ̀kan sí i.",
-          "Igbo: Oge eruola ịzọpụta ỊntanetỊ — ọzọ.",
-          "Hausa: Lokaci ya yi don ceton intanet — akai.",
-          "English: The End!"
-        ],
         "rates": [
           {
             "capabilities": [
@@ -2944,23 +2619,7 @@
           "zu"
         ],
         "baseApiUrl": "https://aiplatform.googleapis.com",
-        "modelCardUrl": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/guides/gemini-3-5-flash",
         "reasoning": true,
-        "openingThinkTag": "<think>",
-        "closingThinkTag": "</think>",
-        "contextWindow": 1048576,
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo ìrọ̀lẹ, àwọn aja ni àdúùgbò wa n pa aríwo.",
-          "Igbo: Mgbede ọ bụla, nkịta ndị nọ n'agbata obi anyị na-ebe ákwá.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet - again.",
-          "Yoruba: Ó ti tó àkókò láti tọjú Íńtánẹ́ẹ̀tì - lẹ́ẹ̀kan sí i.",
-          "Igbo: Oge eruola ịzọpụta ỊntanetỊ - ọzọ.",
-          "Hausa: Lokaci ya yi don ceton intanet - akai.",
-          "English: The End!"
-        ],
         "rates": [
           {
             "capabilities": [
@@ -3108,23 +2767,7 @@
           "zu"
         ],
         "baseApiUrl": "https://aiplatform.googleapis.com",
-        "modelCardUrl": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/guides/gemini-3-5-flash-lite",
         "reasoning": true,
-        "openingThinkTag": "<think>",
-        "closingThinkTag": "</think>",
-        "contextWindow": 1048576,
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo ìrọ̀lẹ, àwọn aja ni àdúùgbò wa n pa aríwo.",
-          "Igbo: Mgbede ọ bụla, nkịta ndị nọ n'agbata obi anyị na-ebe ákwá.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet - again.",
-          "Yoruba: Ó ti tó àkókò láti tọjú Íńtánẹ́ẹ̀tì - lẹ́ẹ̀kan sí i.",
-          "Igbo: Oge eruola ịzọpụta ỊntanetỊ - ọzọ.",
-          "Hausa: Lokaci ya yi don ceton intanet - akai.",
-          "English: The End!"
-        ],
         "rates": [
           {
             "capabilities": [
@@ -3274,23 +2917,7 @@
           "zu"
         ],
         "baseApiUrl": "https://aiplatform.googleapis.com",
-        "modelCardUrl": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/guides/gemini-3-8-flash",
         "reasoning": true,
-        "openingThinkTag": "<think>",
-        "closingThinkTag": "</think>",
-        "contextWindow": 1048576,
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo ìrọ̀lẹ, àwọn aja ni àdúùgbò wa n pa aríwo.",
-          "Igbo: Mgbede ọ bụla, nkịta ndị nọ n'agbata obi anyị na-ebe ákwá.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet - again.",
-          "Yoruba: Ó ti tó àkókò láti tọjú Íńtánẹ́ẹ̀tì - lẹ́ẹ̀kan sí i.",
-          "Igbo: Oge eruola ịzọpụta ỊntanetỊ - ọzọ.",
-          "Hausa: Lokaci ya yi don ceton intanet - akai.",
-          "English: The End!"
-        ],
         "rates": [
           {
             "capabilities": [
@@ -3326,7 +2953,6 @@
           "ko-KR"
         ],
         "baseApiUrl": "https://aiplatform.googleapis.com",
-        "modelCardUrl": "https://docs.cloud.google.com/text-to-speech/docs/gemini-tts",
         "voices": {
           "arabic": [
             "Achernar",
@@ -3681,7 +3307,6 @@
             "Zubenelgenubi"
           ]
         },
-        "notes": "Gemini 3.1 Flash TTS Preview on Google Cloud Vertex AI. Vertex returns raw 24 kHz PCM, which Hypa wraps as WAV. Hypa preserves its existing language selector; only documented Gemini-TTS language codes are accepted.",
         "rates": [
           {
             "capabilities": [
@@ -3713,7 +3338,6 @@
           "ko-KR"
         ],
         "baseApiUrl": "https://aiplatform.googleapis.com",
-        "modelCardUrl": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/text-to-speech/overview",
         "voices": {
           "arabic": [
             "Achernar",
@@ -4068,7 +3692,6 @@
             "Zubenelgenubi"
           ]
         },
-        "notes": "Gemini 3.8 Flash TTS on Gemini Enterprise. Unary generateContent is on v1 and returns WAV, which Hypa passes through. Uses the same prebuilt voice names as Gemini 3.1 Flash TTS. Hypa keeps its language selector; the model detects the spoken language from the text.",
         "rates": [
           {
             "capabilities": [
@@ -4100,7 +3723,6 @@
           "ko-KR"
         ],
         "baseApiUrl": "https://aiplatform.googleapis.com",
-        "modelCardUrl": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/text-to-speech/overview",
         "voices": {
           "arabic": [
             "Achernar",
@@ -4455,7 +4077,6 @@
             "Zubenelgenubi"
           ]
         },
-        "notes": "Gemini 3.8 Flash-Lite TTS on Gemini Enterprise. Unary generateContent is on v1 and returns WAV, which Hypa passes through. Uses the same prebuilt voice names as Gemini 3.1 Flash TTS. Hypa keeps its language selector; the model detects the spoken language from the text.",
         "rates": [
           {
             "capabilities": [
@@ -4487,7 +4108,6 @@
           "ko-KR"
         ],
         "baseApiUrl": "https://aiplatform.googleapis.com",
-        "modelCardUrl": "https://docs.cloud.google.com/text-to-speech/docs/gemini-tts",
         "voices": {
           "arabic": [
             "Achernar",
@@ -4842,7 +4462,6 @@
             "Zubenelgenubi"
           ]
         },
-        "notes": "Gemini 2.5 Pro TTS on Google Cloud Vertex AI. Vertex returns raw 24 kHz PCM, which Hypa wraps as WAV. Hypa preserves its existing language selector; only documented Gemini-TTS language codes are accepted.",
         "rates": [
           {
             "capabilities": [
@@ -4862,7 +4481,6 @@
         "defaults": [],
         "languages": [],
         "baseApiUrl": "https://aiplatform.googleapis.com",
-        "modelCardUrl": "https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/gemini/3-5-transcribe",
         "rates": [
           {
             "capabilities": [
@@ -4918,12 +4536,8 @@
           "zu"
         ],
         "baseApiUrl": "https://api.mymansa.ai/v1/translate",
-        "modelCardUrl": "https://platform.mymansa.ai/docs/translate",
         "reasoning": false,
-        "openingThinkTag": null,
-        "closingThinkTag": null,
         "requiresSourceLanguage": true,
-        "notes": "Native MT. Requires an explicit source language (no auto-detect). No creativity or max_tokens params. Beta languages (Kirundi, Ndebele (South), Swati, Tigrinya, Twi, Ewe, Lingala, Kikongo, Bambara, Bemba) mainly pair only with English.",
         "rates": [
           {
             "capabilities": [
@@ -4980,9 +4594,7 @@
           "mg-plateau"
         ],
         "baseApiUrl": "https://api.mymansa.ai/v1/transcribe",
-        "modelCardUrl": "https://platform.mymansa.ai/docs/transcribe",
         "requiresSourceLanguage": true,
-        "notes": "Native ASR. Requires an exact language/dialect name — generic \"Arabic\" is not valid here, pick an Arabic (...) dialect row instead. durationSeconds is required, must be a whole number, and is what Mansa bills on.",
         "rates": [
           {
             "capabilities": [
@@ -5279,9 +4891,7 @@
           ]
         },
         "baseApiUrl": "https://api.mymansa.ai/v1/audio/speech",
-        "modelCardUrl": "https://platform.mymansa.ai/docs/speech",
         "timeoutMs": 300000,
-        "notes": "Native TTS, WAV output. Mansa supports streaming; Hypa requests buffered audio. Every language accepts male/female. English also accepts 10 regional accents and 74 {language}_{gender}_speaker voices (English spoken with that language's accent); 10 speaker ids are duplicates of the regional accents (igbo_male_speaker=nigerian_male, yoruba_female_speaker=nigerian_female, twi_*=ghanaian_*, swahili_*=east_african_*, xhosa_*=south_african_*, arabic_*=north_african_*).",
         "rates": [
           {
             "capabilities": [
@@ -5310,7 +4920,6 @@
           "ig"
         ],
         "baseApiUrl": "https://api.yarngpt.ai/api/v1/tts",
-        "modelCardUrl": "https://yarngpt.ai/api-docs",
         "voices": {
           "english": [
             "idera",
@@ -5403,7 +5012,6 @@
             "adam"
           ]
         },
-        "notes": "Character-priced TTS with asynchronous jobs. Supports English, Pidgin, Hausa, Yoruba and Igbo. USD price uses standard credits and the October 16, 2026 exchange-rate snapshot.",
         "rates": [
           {
             "capabilities": [
@@ -5436,7 +5044,6 @@
           "sw"
         ],
         "baseApiUrl": "https://api.elevenlabs.io/v1/text-to-speech",
-        "modelCardUrl": "https://elevenlabs.io/docs/overview/models#eleven-v3",
         "voices": {
           "english": [
             "Bella",
@@ -5623,7 +5230,6 @@
             "Bill"
           ]
         },
-        "notes": "ElevenLabs' most expressive multilingual text-to-speech model. Hosted by ElevenLabs.",
         "rates": [
           {
             "capabilities": [
@@ -5649,7 +5255,6 @@
           "es"
         ],
         "baseApiUrl": "https://api.elevenlabs.io/v1/text-to-speech",
-        "modelCardUrl": "https://elevenlabs.io/docs/overview/models#multilingual-v2",
         "voices": {
           "arabic": [
             "Masry",
@@ -5850,7 +5455,6 @@
             "Bill"
           ]
         },
-        "notes": "ElevenLabs' lifelike, consistent multilingual model for stable long-form speech. Hypa limits requests to 5,000 characters.",
         "rates": [
           {
             "capabilities": [
@@ -5876,7 +5480,6 @@
           "es"
         ],
         "baseApiUrl": "https://api.elevenlabs.io/v1/text-to-speech",
-        "modelCardUrl": "https://elevenlabs.io/docs/overview/models#flash-v2-5",
         "voices": {
           "arabic": [
             "Masry",
@@ -6077,7 +5680,6 @@
             "Bill"
           ]
         },
-        "notes": "ElevenLabs' fast, affordable multilingual model for interactive speech. Hypa limits requests to 5,000 characters.",
         "rates": [
           {
             "capabilities": [
@@ -6101,7 +5703,6 @@
           "ha"
         ],
         "baseApiUrl": "https://api.elevenlabs.io/v1/speech-to-text",
-        "modelCardUrl": "https://elevenlabs.io/docs/overview/models#scribe-v2",
         "rates": [
           {
             "capabilities": [
@@ -6116,7 +5717,6 @@
       {
         "displayName": "Muse Spark 1.3",
         "name": "muse-spark-1.3",
-        "tools": true,
         "capabilities": [
           "AC",
           "MT",
@@ -6124,12 +5724,8 @@
         ],
         "defaults": [],
         "baseApiUrl": "https://api.meta.ai/v1/chat/completions",
-        "modelCardUrl": "https://dev.meta.ai/docs/models",
         "apiKeyEnv": "META_MODEL_API_KEY",
         "reasoning": true,
-        "openingThinkTag": "<think>",
-        "closingThinkTag": "</think>",
-        "contextWindow": 1048576,
         "languages": [
           "an",
           "ar",
@@ -6173,18 +5769,6 @@
           "uk",
           "vi",
           "zh"
-        ],
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo \u00ecr\u1ecd\u0300l\u1eb9, \u00e0w\u1ecdn aja ni \u00e0d\u00fa\u00f9gb\u00f2 wa n pa ar\u00edwo.",
-          "Igbo: Mgbede \u1ecd b\u1ee5la, nk\u1ecbta nd\u1ecb n\u1ecd n'agbata obi any\u1ecb na-ebe \u00e1kw\u00e1.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet \u2014 again.",
-          "Yoruba: \u00d3 ti t\u00f3 \u00e0k\u00f3k\u00f2 l\u00e1ti t\u1ecdj\u00fa \u00cd\u0144t\u00e1n\u1eb9\u0301\u1eb9\u0300t\u00ec \u2014 l\u1eb9\u0301\u1eb9\u0300kan s\u00ed i.",
-          "Igbo: Oge eruola \u1ecbz\u1ecdp\u1ee5ta \u1ecantanet\u1eca \u2014 \u1ecdz\u1ecd.",
-          "Hausa: Lokaci ya yi don ceton intanet \u2014 akai.",
-          "English: The End!"
         ],
         "rates": [
           {
@@ -6201,7 +5785,6 @@
       {
         "displayName": "Muse Spark 1.3 Contributor",
         "name": "muse-spark-1.3-contributor",
-        "tools": true,
         "capabilities": [
           "AC",
           "MT",
@@ -6209,13 +5792,8 @@
         ],
         "defaults": [],
         "baseApiUrl": "https://api.meta.ai/v1/chat/completions",
-        "modelCardUrl": "https://dev.meta.ai/docs/models",
         "apiKeyEnv": "META_MODEL_API_KEY",
-        "notes": "Cheaper rate. Meta may use prompts and outputs sent to this model to improve its products. Don't send private data.",
         "reasoning": true,
-        "openingThinkTag": "<think>",
-        "closingThinkTag": "</think>",
-        "contextWindow": 1048576,
         "languages": [
           "an",
           "ar",
@@ -6259,18 +5837,6 @@
           "uk",
           "vi",
           "zh"
-        ],
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo \u00ecr\u1ecd\u0300l\u1eb9, \u00e0w\u1ecdn aja ni \u00e0d\u00fa\u00f9gb\u00f2 wa n pa ar\u00edwo.",
-          "Igbo: Mgbede \u1ecd b\u1ee5la, nk\u1ecbta nd\u1ecb n\u1ecd n'agbata obi any\u1ecb na-ebe \u00e1kw\u00e1.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet \u2014 again.",
-          "Yoruba: \u00d3 ti t\u00f3 \u00e0k\u00f3k\u00f2 l\u00e1ti t\u1ecdj\u00fa \u00cd\u0144t\u00e1n\u1eb9\u0301\u1eb9\u0300t\u00ec \u2014 l\u1eb9\u0301\u1eb9\u0300kan s\u00ed i.",
-          "Igbo: Oge eruola \u1ecbz\u1ecdp\u1ee5ta \u1ecantanet\u1eca \u2014 \u1ecdz\u1ecd.",
-          "Hausa: Lokaci ya yi don ceton intanet \u2014 akai.",
-          "English: The End!"
         ],
         "rates": [
           {
@@ -6287,7 +5853,6 @@
       {
         "displayName": "Muse Spark 1.2",
         "name": "muse-spark-1.2",
-        "tools": true,
         "capabilities": [
           "AC",
           "MT",
@@ -6295,12 +5860,8 @@
         ],
         "defaults": [],
         "baseApiUrl": "https://api.meta.ai/v1/chat/completions",
-        "modelCardUrl": "https://dev.meta.ai/docs/models",
         "apiKeyEnv": "META_MODEL_API_KEY",
         "reasoning": true,
-        "openingThinkTag": "<think>",
-        "closingThinkTag": "</think>",
-        "contextWindow": 1048576,
         "languages": [
           "an",
           "ar",
@@ -6344,18 +5905,6 @@
           "uk",
           "vi",
           "zh"
-        ],
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo \u00ecr\u1ecd\u0300l\u1eb9, \u00e0w\u1ecdn aja ni \u00e0d\u00fa\u00f9gb\u00f2 wa n pa ar\u00edwo.",
-          "Igbo: Mgbede \u1ecd b\u1ee5la, nk\u1ecbta nd\u1ecb n\u1ecd n'agbata obi any\u1ecb na-ebe \u00e1kw\u00e1.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet \u2014 again.",
-          "Yoruba: \u00d3 ti t\u00f3 \u00e0k\u00f3k\u00f2 l\u00e1ti t\u1ecdj\u00fa \u00cd\u0144t\u00e1n\u1eb9\u0301\u1eb9\u0300t\u00ec \u2014 l\u1eb9\u0301\u1eb9\u0300kan s\u00ed i.",
-          "Igbo: Oge eruola \u1ecbz\u1ecdp\u1ee5ta \u1ecantanet\u1eca \u2014 \u1ecdz\u1ecd.",
-          "Hausa: Lokaci ya yi don ceton intanet \u2014 akai.",
-          "English: The End!"
         ],
         "rates": [
           {
@@ -6372,7 +5921,6 @@
       {
         "displayName": "Muse Spark 1.2 Contributor",
         "name": "muse-spark-1.2-contributor",
-        "tools": true,
         "capabilities": [
           "AC",
           "MT",
@@ -6380,13 +5928,8 @@
         ],
         "defaults": [],
         "baseApiUrl": "https://api.meta.ai/v1/chat/completions",
-        "modelCardUrl": "https://dev.meta.ai/docs/models",
         "apiKeyEnv": "META_MODEL_API_KEY",
-        "notes": "Cheaper rate. Meta may use prompts and outputs sent to this model to improve its products. Don't send private data.",
         "reasoning": true,
-        "openingThinkTag": "<think>",
-        "closingThinkTag": "</think>",
-        "contextWindow": 1048576,
         "languages": [
           "an",
           "ar",
@@ -6430,18 +5973,6 @@
           "uk",
           "vi",
           "zh"
-        ],
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo \u00ecr\u1ecd\u0300l\u1eb9, \u00e0w\u1ecdn aja ni \u00e0d\u00fa\u00f9gb\u00f2 wa n pa ar\u00edwo.",
-          "Igbo: Mgbede \u1ecd b\u1ee5la, nk\u1ecbta nd\u1ecb n\u1ecd n'agbata obi any\u1ecb na-ebe \u00e1kw\u00e1.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet \u2014 again.",
-          "Yoruba: \u00d3 ti t\u00f3 \u00e0k\u00f3k\u00f2 l\u00e1ti t\u1ecdj\u00fa \u00cd\u0144t\u00e1n\u1eb9\u0301\u1eb9\u0300t\u00ec \u2014 l\u1eb9\u0301\u1eb9\u0300kan s\u00ed i.",
-          "Igbo: Oge eruola \u1ecbz\u1ecdp\u1ee5ta \u1ecantanet\u1eca \u2014 \u1ecdz\u1ecd.",
-          "Hausa: Lokaci ya yi don ceton intanet \u2014 akai.",
-          "English: The End!"
         ],
         "rates": [
           {
@@ -6458,7 +5989,6 @@
       {
         "displayName": "Muse Wonder 1.0",
         "name": "muse-wonder-1.0",
-        "tools": true,
         "capabilities": [
           "AC",
           "MT",
@@ -6466,13 +5996,8 @@
         ],
         "defaults": [],
         "baseApiUrl": "https://api.meta.ai/v1/chat/completions",
-        "modelCardUrl": "https://dev.meta.ai/docs/models",
         "apiKeyEnv": "META_MODEL_API_KEY",
-        "notes": "Preview, premium price.",
         "reasoning": true,
-        "openingThinkTag": "<think>",
-        "closingThinkTag": "</think>",
-        "contextWindow": 1048576,
         "languages": [
           "an",
           "ar",
@@ -6516,18 +6041,6 @@
           "uk",
           "vi",
           "zh"
-        ],
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo \u00ecr\u1ecd\u0300l\u1eb9, \u00e0w\u1ecdn aja ni \u00e0d\u00fa\u00f9gb\u00f2 wa n pa ar\u00edwo.",
-          "Igbo: Mgbede \u1ecd b\u1ee5la, nk\u1ecbta nd\u1ecb n\u1ecd n'agbata obi any\u1ecb na-ebe \u00e1kw\u00e1.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet \u2014 again.",
-          "Yoruba: \u00d3 ti t\u00f3 \u00e0k\u00f3k\u00f2 l\u00e1ti t\u1ecdj\u00fa \u00cd\u0144t\u00e1n\u1eb9\u0301\u1eb9\u0300t\u00ec \u2014 l\u1eb9\u0301\u1eb9\u0300kan s\u00ed i.",
-          "Igbo: Oge eruola \u1ecbz\u1ecdp\u1ee5ta \u1ecantanet\u1eca \u2014 \u1ecdz\u1ecd.",
-          "Hausa: Lokaci ya yi don ceton intanet \u2014 akai.",
-          "English: The End!"
         ],
         "rates": [
           {
@@ -6549,7 +6062,6 @@
         ],
         "defaults": [],
         "baseApiUrl": "https://api.meta.ai/v1/asr/transcribe",
-        "modelCardUrl": "https://dev.meta.ai/docs/speech-to-text",
         "apiKeyEnv": "META_MODEL_API_KEY",
         "reasoning": false,
         "languages": [
@@ -6591,7 +6103,6 @@
       {
         "displayName": "Muse Spark Open",
         "name": "meta-models/Muse-Spark-Open-816B-A42B:baseten",
-        "tools": true,
         "capabilities": [
           "AC",
           "MT",
@@ -6599,11 +6110,7 @@
         ],
         "defaults": [],
         "baseApiUrl": "https://router.huggingface.co/v1/chat/completions",
-        "modelCardUrl": "https://huggingface.co/meta-models/Muse-Spark-Open-816B-A42B",
         "reasoning": true,
-        "openingThinkTag": "<think>",
-        "closingThinkTag": "</think>",
-        "contextWindow": 1048576,
         "languages": [
           "an",
           "ar",
@@ -6647,18 +6154,6 @@
           "uk",
           "vi",
           "zh"
-        ],
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo \u00ecr\u1ecd\u0300l\u1eb9, \u00e0w\u1ecdn aja ni \u00e0d\u00fa\u00f9gb\u00f2 wa n pa ar\u00edwo.",
-          "Igbo: Mgbede \u1ecd b\u1ee5la, nk\u1ecbta nd\u1ecb n\u1ecd n'agbata obi any\u1ecb na-ebe \u00e1kw\u00e1.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet \u2014 again.",
-          "Yoruba: \u00d3 ti t\u00f3 \u00e0k\u00f3k\u00f2 l\u00e1ti t\u1ecdj\u00fa \u00cd\u0144t\u00e1n\u1eb9\u0301\u1eb9\u0300t\u00ec \u2014 l\u1eb9\u0301\u1eb9\u0300kan s\u00ed i.",
-          "Igbo: Oge eruola \u1ecbz\u1ecdp\u1ee5ta \u1ecantanet\u1eca \u2014 \u1ecdz\u1ecd.",
-          "Hausa: Lokaci ya yi don ceton intanet \u2014 akai.",
-          "English: The End!"
         ],
         "rates": [
           {
@@ -6675,7 +6170,6 @@
       {
         "displayName": "Muse Glimmer 30B",
         "name": "meta-models/Muse-Glimmer-30B:deepinfra",
-        "tools": true,
         "capabilities": [
           "AC",
           "MT",
@@ -6683,11 +6177,7 @@
         ],
         "defaults": [],
         "baseApiUrl": "https://router.huggingface.co/v1/chat/completions",
-        "modelCardUrl": "https://huggingface.co/meta-models/Muse-Glimmer-30B",
         "reasoning": true,
-        "openingThinkTag": "<think>",
-        "closingThinkTag": "</think>",
-        "contextWindow": 131072,
         "languages": [
           "an",
           "ar",
@@ -6731,18 +6221,6 @@
           "uk",
           "vi",
           "zh"
-        ],
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo \u00ecr\u1ecd\u0300l\u1eb9, \u00e0w\u1ecdn aja ni \u00e0d\u00fa\u00f9gb\u00f2 wa n pa ar\u00edwo.",
-          "Igbo: Mgbede \u1ecd b\u1ee5la, nk\u1ecbta nd\u1ecb n\u1ecd n'agbata obi any\u1ecb na-ebe \u00e1kw\u00e1.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet \u2014 again.",
-          "Yoruba: \u00d3 ti t\u00f3 \u00e0k\u00f3k\u00f2 l\u00e1ti t\u1ecdj\u00fa \u00cd\u0144t\u00e1n\u1eb9\u0301\u1eb9\u0300t\u00ec \u2014 l\u1eb9\u0301\u1eb9\u0300kan s\u00ed i.",
-          "Igbo: Oge eruola \u1ecbz\u1ecdp\u1ee5ta \u1ecantanet\u1eca \u2014 \u1ecdz\u1ecd.",
-          "Hausa: Lokaci ya yi don ceton intanet \u2014 akai.",
-          "English: The End!"
         ],
         "rates": [
           {
@@ -6759,7 +6237,6 @@
       {
         "displayName": "Llama 4 Scout",
         "name": "meta-llama/Llama-4-Scout-17B-16E-Instruct:nscale",
-        "tools": true,
         "capabilities": [
           "AC",
           "MT",
@@ -6767,9 +6244,7 @@
         ],
         "defaults": [],
         "baseApiUrl": "https://router.huggingface.co/v1/chat/completions",
-        "modelCardUrl": "https://huggingface.co/meta-llama/Llama-4-Scout-17B-16E-Instruct",
         "reasoning": false,
-        "contextWindow": 890000,
         "languages": [
           "an",
           "ar",
@@ -6813,18 +6288,6 @@
           "uk",
           "vi",
           "zh"
-        ],
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo \u00ecr\u1ecd\u0300l\u1eb9, \u00e0w\u1ecdn aja ni \u00e0d\u00fa\u00f9gb\u00f2 wa n pa ar\u00edwo.",
-          "Igbo: Mgbede \u1ecd b\u1ee5la, nk\u1ecbta nd\u1ecb n\u1ecd n'agbata obi any\u1ecb na-ebe \u00e1kw\u00e1.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet \u2014 again.",
-          "Yoruba: \u00d3 ti t\u00f3 \u00e0k\u00f3k\u00f2 l\u00e1ti t\u1ecdj\u00fa \u00cd\u0144t\u00e1n\u1eb9\u0301\u1eb9\u0300t\u00ec \u2014 l\u1eb9\u0301\u1eb9\u0300kan s\u00ed i.",
-          "Igbo: Oge eruola \u1ecbz\u1ecdp\u1ee5ta \u1ecantanet\u1eca \u2014 \u1ecdz\u1ecd.",
-          "Hausa: Lokaci ya yi don ceton intanet \u2014 akai.",
-          "English: The End!"
         ],
         "rates": [
           {
@@ -6841,16 +6304,13 @@
       {
         "displayName": "Llama 3.3 70B",
         "name": "meta-llama/Llama-3.3-70B-Instruct:scaleway",
-        "tools": true,
         "capabilities": [
           "AC",
           "MT"
         ],
         "defaults": [],
         "baseApiUrl": "https://router.huggingface.co/v1/chat/completions",
-        "modelCardUrl": "https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct",
         "reasoning": false,
-        "contextWindow": 100000,
         "languages": [
           "an",
           "ar",
@@ -6894,18 +6354,6 @@
           "uk",
           "vi",
           "zh"
-        ],
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo \u00ecr\u1ecd\u0300l\u1eb9, \u00e0w\u1ecdn aja ni \u00e0d\u00fa\u00f9gb\u00f2 wa n pa ar\u00edwo.",
-          "Igbo: Mgbede \u1ecd b\u1ee5la, nk\u1ecbta nd\u1ecb n\u1ecd n'agbata obi any\u1ecb na-ebe \u00e1kw\u00e1.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet \u2014 again.",
-          "Yoruba: \u00d3 ti t\u00f3 \u00e0k\u00f3k\u00f2 l\u00e1ti t\u1ecdj\u00fa \u00cd\u0144t\u00e1n\u1eb9\u0301\u1eb9\u0300t\u00ec \u2014 l\u1eb9\u0301\u1eb9\u0300kan s\u00ed i.",
-          "Igbo: Oge eruola \u1ecbz\u1ecdp\u1ee5ta \u1ecantanet\u1eca \u2014 \u1ecdz\u1ecd.",
-          "Hausa: Lokaci ya yi don ceton intanet \u2014 akai.",
-          "English: The End!"
         ],
         "rates": [
           {
@@ -6921,16 +6369,13 @@
       {
         "displayName": "Llama 3.1 8B",
         "name": "meta-llama/Llama-3.1-8B-Instruct:deepinfra",
-        "tools": true,
         "capabilities": [
           "AC",
           "MT"
         ],
         "defaults": [],
         "baseApiUrl": "https://router.huggingface.co/v1/chat/completions",
-        "modelCardUrl": "https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct",
         "reasoning": false,
-        "contextWindow": 131072,
         "languages": [
           "an",
           "ar",
@@ -6974,18 +6419,6 @@
           "uk",
           "vi",
           "zh"
-        ],
-        "placeholders": [
-          "Enter text to translate...",
-          "English: Every evening, the dogs in our neighbourhood are howling.",
-          "Yoruba: Gbogbo \u00ecr\u1ecd\u0300l\u1eb9, \u00e0w\u1ecdn aja ni \u00e0d\u00fa\u00f9gb\u00f2 wa n pa ar\u00edwo.",
-          "Igbo: Mgbede \u1ecd b\u1ee5la, nk\u1ecbta nd\u1ecb n\u1ecd n'agbata obi any\u1ecb na-ebe \u00e1kw\u00e1.",
-          "Hausa: Kowane yamma, karnuka a unguwarmu suna yin ihu.",
-          "English: It's time to save the internet \u2014 again.",
-          "Yoruba: \u00d3 ti t\u00f3 \u00e0k\u00f3k\u00f2 l\u00e1ti t\u1ecdj\u00fa \u00cd\u0144t\u00e1n\u1eb9\u0301\u1eb9\u0300t\u00ec \u2014 l\u1eb9\u0301\u1eb9\u0300kan s\u00ed i.",
-          "Igbo: Oge eruola \u1ecbz\u1ecdp\u1ee5ta \u1ecantanet\u1eca \u2014 \u1ecdz\u1ecd.",
-          "Hausa: Lokaci ya yi don ceton intanet \u2014 akai.",
-          "English: The End!"
         ],
         "rates": [
           {

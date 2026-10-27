@@ -75,6 +75,29 @@ for (const group of modelGroups) {
 export const LANGUAGE_INFO_BY_NAME = languageInfoByName;
 export const LANGUAGE_INFO_BY_CODE = languageInfoByCode;
 
+const voicesByLanguageName: Record<string, string[]> = {};
+const ttsProviderMap = modelsConfig.TTS as Record<string, ConfiguredModel[]>;
+for (const models of Object.values(ttsProviderMap)) {
+  for (const model of models) {
+    for (const [rawLanguageName, voices] of Object.entries(
+      model.voices ?? {},
+    )) {
+      const nameKey = rawLanguageName.trim().toLowerCase();
+      if (!languageInfoByName[nameKey]) {
+        throw new Error(
+          `TTS model ${model.name} defines voices for unknown language ${rawLanguageName}`,
+        );
+      }
+
+      const existing = voicesByLanguageName[nameKey] ?? [];
+      voicesByLanguageName[nameKey] = [
+        ...existing,
+        ...voices.filter((voice) => !existing.includes(voice)),
+      ];
+    }
+  }
+}
+
 export const LEGACY_LANGUAGE_CODES: Record<string, string> = {
   tiv: "tv",
   ann: "an",
