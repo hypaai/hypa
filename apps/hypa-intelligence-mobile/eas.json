@@ -1,0 +1,35 @@
+{
+  "cli": {
+    "version": ">= 16",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "node": "22.22.2",
+      "ios": {
+        "simulator": true
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "node": "22.22.2"
+    },
+    "production": {
+      "autoIncrement": true,
+      "node": "22.22.2"
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "completed"
+      },
+      "ios": {
+        "ascAppId": "6776767582"
+      }
+    }
+  }
+}

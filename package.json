@@ -2,11 +2,9 @@
   "name": "hypa-x-meta",
   "private": true,
   "scripts": {
-    "build": "turbo run build",
     "dev": "turbo run dev",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types",
-    "test": "turbo run test"
+    "check-types": "turbo run check-types"
   },
   "devDependencies": {
     "prettier": "3.9.6",

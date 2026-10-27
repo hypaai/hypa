@@ -1,0 +1,35 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "types": [
+      "react"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "*"
+      ],
+      "hypa-keyboard-input-method-picker": [
+        "./n-modules/hypa-keyboard-input-method-picker"
+      ],
+      "hypa-keyboard-input-method-picker/*": [
+        "./n-modules/hypa-keyboard-input-method-picker/*"
+      ],
+      "hypa-keyboard-storage": [
+        "./n-modules/hypa-keyboard-storage"
+      ],
+      "hypa-keyboard-storage/*": [
+        "./n-modules/hypa-keyboard-storage/*"
+      ]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "plugins"
+  ]
+}

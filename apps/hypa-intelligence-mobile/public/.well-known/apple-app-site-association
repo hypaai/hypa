@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["APPLE_TEAM_ID.com.hypaintelligence.hypaintelligence"],
+        "components": [
+          { "/": "/refer", "comment": "Referral universal link" },
+          { "/": "/refer/*", "comment": "Referral universal link subpaths" }
+        ]
+      }
+    ]
+  }
+}

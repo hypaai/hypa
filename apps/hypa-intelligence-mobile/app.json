@@ -1,0 +1,72 @@
+{
+  "expo": {
+    "name": "Hypa Intelligence",
+    "slug": "hypa-intelligence",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "hypaintelligence",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "usesAppleSignIn": true,
+      "bundleIdentifier": "com.hypaintelligence.hypaintelligence",
+      "associatedDomains": ["applinks:hypaintelligence.com"],
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Hypa Intelligence uses your microphone only when you tap and hold the voice button to capture speech for translation and speech-to-text. For example, if you say 'How much is this?', we record that clip, convert it to text, and return the translation."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.hypaintelligence.hypaintelligence",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "hypaintelligence.com",
+              "pathPrefix": "/refer"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-apple-authentication",
+      "expo-dev-client",
+      "./plugins/hypa-keyboard-android-ime",
+      "expo-video",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Hypa Intelligence uses your microphone only when you tap and hold the voice button to capture speech for translation and speech-to-text. For example, if you say 'How much is this?', we record that clip, convert it to text, and return the translation."
+        }
+      ]
+    ],
+    "owner": "hypa",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "562f6650-2998-46fe-83d8-4c96559429c1"
+      }
+    }
+  }
+}

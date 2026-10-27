@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.hypaintelligence.hypaintelligence",
+      "sha256_cert_fingerprints": [
+        "D0:1B:BA:9D:52:25:D4:35:93:46:54:0F:1F:F8:CB:26:3B:05:8E:D6:55:20:EB:DF:F4:F5:F5:41:21:63:FA:96"
+      ]
+    }
+  }
+]
