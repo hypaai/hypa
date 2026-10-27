@@ -1,0 +1,16 @@
+{
+  "unicodeVersion": "17.0",
+  "emojiVersion": "17.0",
+  "dataVersion": "1.0.0",
+  "generatedAt": "2026-08-16",
+  "entryCount": 1764,
+  "groupCount": 9,
+  "source": "Unicode Consortium",
+  "sourceFiles": [
+    "emoji-test.txt"
+  ],
+  "sourceUrl": "https://unicode.org/Public/emoji/17.0/emoji-test.txt",
+  "license": "Unicode License v3 (https://www.unicode.org/license.txt)",
+  "generator": "tools/emoji/build_emoji_index.py",
+  "notes": "Fully-qualified entries only. Skin-tone sequences, and gendered forms Unicode names as a set, are attached to their neutral base entry rather than listed separately. No emoji artwork is bundled; rendering uses the platform emoji font."
+}

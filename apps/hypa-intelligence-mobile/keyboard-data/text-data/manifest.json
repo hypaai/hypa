@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "formats": {
+    "words.txt": "canonical<TAB>count per line; # lines are comments; counts are relative, log-normalized at load",
+    "common.txt": "top common words by frequency, LC_ALL=C sorted",
+    "dictionary.txt": "one lowercase ASCII word per line, LC_ALL=C sorted; validity lexicon for autocorrect only",
+    "bigrams.txt": "word1 word2<TAB>count per line"
+  },
+  "datasets": [
+    {
+      "path": "en/common.txt",
+      "language": "en",
+      "source": "Peter Norvig's Google Web Trillion Word unigrams (https://norvig.com/ngrams/count_1w.txt) top 10000",
+      "license": "Google Web 1T-derived frequency lists, distributed freely by the author",
+      "processing": "download top 10000, sort",
+      "generated": "2026-08-28",
+      "redistributionAllowed": false
+    },
+    {
+      "path": "en/dictionary.txt",
+      "language": "en",
+      "source": "macOS /usr/share/dict/words (Webster's Second International, 1934 — 'web2')",
+      "license": "Public domain",
+      "processing": "grep -E '^[a-z]{2,15}$' | LC_ALL=C sort -u",
+      "generated": "2026-08-13",
+      "redistributionAllowed": true
+    },
+    {
+      "path": "en/words.txt",
+      "language": "en",
+      "source": "Adam Kilgarriff's BNC frequency lists (user-supplied 1_1_all_fullalpha.txt) merged with Peter Norvig's Google Web Trillion Word unigrams (https://norvig.com/ngrams/count_1w.txt)",
+      "license": "BNC-derived + Google Web 1T-derived frequency lists, both distributed freely by their authors — verify redistribution terms before commercial release",
+      "processing": "tools/text-data: import_kilgarriff_bnc.py; merge_counts.py --web-min-count 5000000; build_dictionary.py --min-count 30 --top 45000 --min-len 1",
+      "generated": "2026-08-13",
+      "redistributionAllowed": false,
+      "notes": "redistributionAllowed set false pending license verification"
+    },
+    {
+      "path": "en/bigrams.txt",
+      "language": "en",
+      "source": "Peter Norvig's Google Web Trillion Word bigrams (https://norvig.com/ngrams/count_2w.txt)",
+      "license": "Google Web 1T-derived frequency list, distributed freely by the author — verify redistribution terms before commercial release",
+      "processing": "tools/text-data/filter_bigrams.py --per-word 12 --top 60000 against en/words.txt",
+      "generated": "2026-08-13",
+      "redistributionAllowed": false,
+      "notes": "redistributionAllowed set false pending license verification"
+    },
+    {
+      "path": "yo/words.txt",
+      "language": "yo",
+      "source": "Original curated starter list with canonical Yoruba orthography (dot-below + tone marks)",
+      "license": "Project-owned original work",
+      "generated": "2026-08-13",
+      "redistributionAllowed": true,
+      "notes": "Starter quality only — replace with real corpus output; orthography should be reviewed by a Yoruba speaker"
+    }
+  ]
+}
