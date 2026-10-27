@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["HypaKeyboardStorageModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.hypakeyboardstorage.HypaKeyboardStorageModule"]
+  }
+}

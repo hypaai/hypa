@@ -1,0 +1,13 @@
+{
+  "name": "hypa-keyboard-input-method-picker",
+  "version": "0.0.1",
+  "main": "index.ts",
+  "types": "index.ts",
+  "private": true,
+  "peerDependencies": {
+    "expo": "*",
+    "expo-modules-core": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

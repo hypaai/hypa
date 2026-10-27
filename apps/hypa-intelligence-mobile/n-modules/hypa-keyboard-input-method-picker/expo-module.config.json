@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["HypaKeyboardInputMethodPickerModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.hypakeyboardinputmethodpicker.HypaKeyboardInputMethodPickerModule"]
+  }
+}
