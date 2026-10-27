@@ -18,11 +18,10 @@ coverage
 # Turbo
 .turbo
 
-# Vercel
-.vercel
+# Expo
+.expo/
 
 # Build Outputs
-.next/
 out/
 build
 dist
