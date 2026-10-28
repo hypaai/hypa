@@ -1,0 +1,247 @@
+[
+  {
+    "file": "01_road_closed.jpg",
+    "kind": "sign",
+    "strings": [
+      "ROAD CLOSED",
+      "NO ENTRY",
+      "Use the next left turn"
+    ]
+  },
+  {
+    "file": "02_bus_stop.jpg",
+    "kind": "sign",
+    "strings": [
+      "BUS STOP",
+      "Route 12",
+      "to Central Market"
+    ]
+  },
+  {
+    "file": "03_welcome.jpg",
+    "kind": "sign",
+    "strings": [
+      "WELCOME TO LAGOS",
+      "Please drive safely",
+      "Speed limit 50"
+    ]
+  },
+  {
+    "file": "04_shop_open.jpg",
+    "kind": "sign",
+    "strings": [
+      "OPEN",
+      "Monday to Saturday",
+      "8am to 6pm"
+    ]
+  },
+  {
+    "file": "05_pharmacy.jpg",
+    "kind": "sign",
+    "strings": [
+      "PHARMACY",
+      "Prescriptions filled here",
+      "Open every day"
+    ]
+  },
+  {
+    "file": "06_bakery.jpg",
+    "kind": "sign",
+    "strings": [
+      "FRESH BREAD",
+      "Baked every morning",
+      "Buy two, get one free"
+    ]
+  },
+  {
+    "file": "07_restaurant_menu.jpg",
+    "kind": "menu",
+    "strings": [
+      "Today's Menu",
+      "Jollof rice with chicken",
+      "N3,500",
+      "Pounded yam and egusi soup",
+      "N4,000",
+      "Grilled fish with plantain",
+      "N4,500",
+      "Pepper soup",
+      "N2,500",
+      "Fresh fruit salad",
+      "N1,800",
+      "Bottled water",
+      "N500"
+    ]
+  },
+  {
+    "file": "08_cafe_board.jpg",
+    "kind": "menu",
+    "strings": [
+      "Cafe Menu",
+      "Hot coffee",
+      "N1,200",
+      "Fresh orange juice",
+      "N1,500",
+      "Chicken sandwich",
+      "N2,800",
+      "Chocolate cake",
+      "N2,000"
+    ]
+  },
+  {
+    "file": "09_special.jpg",
+    "kind": "menu",
+    "strings": [
+      "Special Offer",
+      "Rice and stew",
+      "N2,000",
+      "Free drink with every meal",
+      "",
+      "Offer ends on Friday",
+      ""
+    ]
+  },
+  {
+    "file": "10_grocery_receipt.jpg",
+    "kind": "receipt",
+    "strings": [
+      "GREEN MARKET",
+      "Rice 5kg",
+      "6,500",
+      "Cooking oil 1L",
+      "2,400",
+      "Tomatoes",
+      "1,200",
+      "Bread",
+      "900",
+      "Milk 500ml",
+      "1,100",
+      "Total",
+      "12,100",
+      "Paid in cash",
+      "12,100",
+      "Thank you for shopping with us"
+    ]
+  },
+  {
+    "file": "11_pharmacy_receipt.jpg",
+    "kind": "receipt",
+    "strings": [
+      "CITY PHARMACY",
+      "Paracetamol 500mg",
+      "800",
+      "Vitamin C tablets",
+      "1,500",
+      "Bandages",
+      "600",
+      "Hand sanitiser",
+      "1,000",
+      "Total",
+      "3,900",
+      "Paid in cash",
+      "3,900",
+      "Thank you for shopping with us"
+    ]
+  },
+  {
+    "file": "12_registration_form.jpg",
+    "kind": "form",
+    "strings": [
+      "Registration Form",
+      "Full name",
+      "Date of birth",
+      "Home address",
+      "Phone number",
+      "Occupation",
+      "Signature"
+    ]
+  },
+  {
+    "file": "13_clinic_form.jpg",
+    "kind": "form",
+    "strings": [
+      "Clinic Visit Form",
+      "Reason for visit",
+      "Allergies",
+      "Current medicines",
+      "Emergency contact",
+      "Date"
+    ]
+  },
+  {
+    "file": "14_paracetamol.jpg",
+    "kind": "medicine_label",
+    "strings": [
+      "PARACETAMOL 500 mg",
+      "Take 2 tablets every 8 hours",
+      "Do not take more than 8 tablets in 24 hours",
+      "Keep out of reach of children",
+      "Store in a cool dry place"
+    ]
+  },
+  {
+    "file": "15_antibiotic.jpg",
+    "kind": "medicine_label",
+    "strings": [
+      "AMOXICILLIN 250 mg",
+      "Take one capsule three times a day",
+      "Take after meals",
+      "Finish the full course",
+      "Do not share this medicine"
+    ]
+  },
+  {
+    "file": "16_health_day.jpg",
+    "kind": "poster",
+    "strings": [
+      "COMMUNITY",
+      "HEALTH DAY",
+      "Free check-ups for everyone",
+      "Saturday at 9am",
+      "Town Hall"
+    ]
+  },
+  {
+    "file": "17_clean_water.jpg",
+    "kind": "poster",
+    "strings": [
+      "CLEAN WATER",
+      "FOR ALL",
+      "Wash your hands with soap",
+      "Before you eat"
+    ]
+  },
+  {
+    "file": "18_chat_screenshot.jpg",
+    "kind": "phone_screenshot",
+    "strings": [
+      "Market Group",
+      "Good morning everyone",
+      "Is the market open today?",
+      "Yes, we open at 8am",
+      "Please bring your own bags",
+      "Thank you, see you soon"
+    ]
+  },
+  {
+    "file": "19_settings_screenshot.jpg",
+    "kind": "phone_screenshot",
+    "strings": [
+      "Settings",
+      "Notifications",
+      "Language",
+      "Dark mode",
+      "Privacy",
+      "Storage",
+      "Help and support"
+    ]
+  },
+  {
+    "file": "20_wet_floor.jpg",
+    "kind": "sign",
+    "strings": [
+      "CAUTION",
+      "WET FLOOR",
+      "Staff only beyond this point"
+    ]
+  }
+]
