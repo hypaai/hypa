@@ -373,6 +373,8 @@ importers:
         specifier: workspace:*
         version: link:../@hypa-config
 
+  packages/localize-image: {}
+
 packages:
 
   '@angular-devkit/core@19.2.24':
