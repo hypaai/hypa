@@ -30,6 +30,43 @@ Text accuracy by language:
 
 - **Gemini 3 Pro Image is incomplete.** Google's rate limit stopped most of its requests, and the run was cut off at 63 of 80 edits, so its numbers rest on fewer edits than the others.
 - **A model scored the work.** Muse Spark scored Muse Image's own output, so it may be generous to it. A second scorer from another company would settle that.
-- **No native speaker has checked the results yet.** Tone marks and Efik spelling need a Yoruba, Hausa and Efik speaker, who should look at a sample.
+- **No native speaker has checked the results.** A second, independent reading is below, but tone marks and Efik spelling still deserve a Yoruba, Hausa and Efik speaker.
 - **The pictures are synthetic and clean.** Real photos with glare, angles and handwriting will score lower.
 - Only the translations sent to the image model could be wrong without the picture being wrong. The score measures whether the model drew the words it was given.
+
+## Second check: reading every picture letter by letter
+
+To avoid trusting one scorer, a model from a different company (OpenAI's GPT-4o) read the text off every result picture. For each word the image model was told to write, we checked whether it appears exactly, tone marks included. "Right letters, wrong marks" means the word is there but a tone mark or a dot under a letter is missing or wrong.
+
+| Model | Words checked | Exactly right | Right letters, wrong marks | Wrong or missing |
+|---|---|---|---|---|
+| Muse Image 1.0 | 404 | 75% | 14% | 12% |
+| GPT Image 2.5 | 476 | 76% | 14% | 11% |
+| Nano Banana 2.1 | 445 | 73% | 15% | 13% |
+| Gemini 3 Pro Image | 335 | 71% | 16% | 13% |
+
+Exactly right, by language:
+
+| Model | French | Yoruba | Efik | Hausa |
+|---|---|---|---|---|
+| Muse Image 1.0 | **93%** | **56%** | 78% | 76% |
+| GPT Image 2.5 | 91% | 52% | 74% | **83%** |
+| Nano Banana 2.1 | 89% | 48% | **79%** | 75% |
+| Gemini 3 Pro Image | 85% | 47% | 78% | 100% (9 words) |
+
+- **The four models are within five points of each other**, as in the first scoring. Muse Image is as accurate as the others at a half to one fourteenth of the price.
+- **Yoruba is where every model fails.** Only about half the words are exactly right, and a third to two fifths of them have the right letters with tone marks or dots missing or wrong. This is the weakness to fix, for example by checking the result and retrying.
+- **French is the easiest** (85% to 93%).
+- The reading model can misread a mark too, so these figures are a lower bound on how often the picture is right.
+
+## The translations are the weak link
+
+A model (not a native speaker) read a sample of the translations. It is confident about French, fairly confident about Yoruba and Hausa, and not confident about Efik. Short labels with no context were often translated badly by the translation model that fed the image models:
+
+- "NO ENTRY" came out as "Non entré" in French, and in Yoruba as a phrase that does not mean "no entry".
+- "Take 2 tablets every 8 hours" became "par heure" (every hour) in French.
+- "Keep out of reach of children" became "Éloigner des enfants du bord de la mer" (away from the seaside).
+- Numbers such as "800" were turned into words, sometimes wrongly.
+- Between 2% and 9% of translated strings contained junk, such as `ForCanBeConvertedToF`, `PostalCodesNL`, or letters from another alphabet.
+
+The image models drew these words faithfully, so the pictures can look right and still say the wrong thing. For a product, translate the whole text in one request so the model has context, keep numbers and prices unchanged, reject output with junk in it, and have a person check anything where a mistake matters, such as a medicine label.
