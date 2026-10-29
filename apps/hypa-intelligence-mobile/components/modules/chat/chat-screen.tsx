@@ -435,6 +435,13 @@ export function ChatScreen({
   const messageSize = voiceMode
     ? { fontSize: 26, lineHeight: 34 }
     : { fontSize: 16, lineHeight: 24 };
+  const heading = (extra: number) => ({
+    fontFamily: FONTS.main.semiBold,
+    fontWeight: "normal" as const,
+    fontSize: messageSize.fontSize + extra,
+    lineHeight: messageSize.lineHeight + extra,
+    marginTop: 4,
+  });
   const canSend =
     !locked &&
     !picking &&
@@ -770,20 +777,20 @@ export function ChatScreen({
                         fontFamily: FONTS.main.regular,
                         ...messageSize,
                       },
-                      strong: { fontFamily: FONTS.main.semiBold },
-                      heading1: {
-                        fontFamily: FONTS.main.semiBold,
-                        fontSize: 22,
-                        lineHeight: 30,
-                      },
-                      heading2: {
-                        fontFamily: FONTS.main.semiBold,
-                        fontSize: 19,
-                        lineHeight: 27,
-                      },
-                      heading3: {
-                        fontFamily: FONTS.main.semiBold,
-                        fontSize: 17,
+                      strong: { fontFamily: FONTS.main.semiBold, fontWeight: "normal" },
+                      em: { fontStyle: "normal", color: colors.textStrong },
+                      s: { textDecorationLine: "line-through" },
+                      heading1: heading(4),
+                      heading2: heading(2),
+                      heading3: heading(0),
+                      heading4: heading(0),
+                      heading5: heading(0),
+                      heading6: heading(0),
+                      code_inline: {
+                        fontFamily: FONTS.main.regular,
+                        color: colors.text,
+                        backgroundColor: colors.muted,
+                        borderRadius: 4,
                       },
                       bullet_list_icon: { color: colors.textMuted },
                       ordered_list_icon: { color: colors.textMuted },
@@ -792,11 +799,6 @@ export function ChatScreen({
                         borderLeftColor: colors.border,
                         borderLeftWidth: 3,
                         paddingHorizontal: 12,
-                      },
-                      code_inline: {
-                        color: colors.text,
-                        backgroundColor: colors.muted,
-                        borderRadius: 4,
                       },
                       fence: {
                         color: colors.text,
@@ -834,7 +836,7 @@ export function ChatScreen({
                   >
                     <TypingDots color={colors.textMuted} />
                     {!!item.activity && (
-                      <Text style={{ color: colors.textMuted, fontSize: 14 }}>
+                      <Text style={{ color: colors.textMuted, fontSize: 13 }}>
                         {item.activity}
                       </Text>
                     )}
@@ -856,7 +858,7 @@ export function ChatScreen({
                     />
                     <Text
                       selectable
-                      style={{ color: colors.textMuted, flex: 1, fontSize: 14 }}
+                      style={{ color: colors.textMuted, flex: 1, fontSize: 13 }}
                     >
                       {failure}
                     </Text>
@@ -937,7 +939,7 @@ export function ChatScreen({
                           >
                             <Text
                               selectable
-                              style={{ color: colors.text, fontSize: 14 }}
+                              style={{ color: colors.text, fontSize: 13 }}
                             >
                               {toolLabels(step.name).done} · {step.status}
                               {step.ms != null
