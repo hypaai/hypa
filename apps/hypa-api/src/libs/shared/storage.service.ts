@@ -1,12 +1,12 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from "@nestjs/common";
 import {
   initializeApp,
   cert,
   getApps,
   type ServiceAccount,
-} from 'firebase-admin/app';
-import { getStorage, type Storage } from 'firebase-admin/storage';
-import type { Readable } from 'stream';
+} from "firebase-admin/app";
+import { getStorage, type Storage } from "firebase-admin/storage";
+import type { Readable } from "stream";
 
 export interface FileMetadata {
   path: string;
@@ -17,34 +17,38 @@ export interface FileMetadata {
 @Injectable()
 export class StorageService implements OnModuleInit {
   private firebaseStorage!: Storage;
-  private readonly bucketName = process.env.FIREBASE_STORAGE_BUCKET ?? '';
+  private readonly bucketName = process.env.FIREBASE_STORAGE_BUCKET ?? "";
 
   onModuleInit() {
     if (!this.bucketName) {
       throw new Error(
-        'FIREBASE_STORAGE_BUCKET is required for storage service',
+        "FIREBASE_STORAGE_BUCKET is required for storage service",
       );
     }
 
-    if (getApps().length === 0) {
-      initializeApp({
-        credential: cert(this.getServiceAccount()),
-        storageBucket: this.bucketName,
-      });
-    }
+    try {
+      if (getApps().length === 0) {
+        initializeApp({
+          credential: cert(this.getServiceAccount()),
+          storageBucket: this.bucketName,
+        });
+      }
 
-    this.firebaseStorage = getStorage();
+      this.firebaseStorage = getStorage();
+    } catch (error) {
+      console.log("FIREBASE INIT FAILED")
+    }
   }
 
   private normalizePrivateKey(key: string): string {
-    const normalized = key.replace(/\\r\\n|\\n|\\r/g, '\n').trim();
+    const normalized = key.replace(/\\r\\n|\\n|\\r/g, "\n").trim();
 
     if (
       !/^-----BEGIN [A-Z ]*PRIVATE KEY-----\n[\s\S]+\n-----END [A-Z ]*PRIVATE KEY-----$/.test(
         normalized,
       )
     ) {
-      throw new Error('Firebase private key is invalid');
+      throw new Error("Firebase private key is invalid");
     }
 
     return normalized;
@@ -74,7 +78,7 @@ export class StorageService implements OnModuleInit {
 
     if (!projectId || !clientEmail || !privateKey) {
       throw new Error(
-        'Firebase credentials missing. Provide FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY',
+        "Firebase credentials missing. Provide FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY",
       );
     }
 
@@ -96,7 +100,7 @@ export class StorageService implements OnModuleInit {
   async upload(
     id: string,
     data: Buffer | string,
-    mimeType = 'application/octet-stream',
+    mimeType = "application/octet-stream",
     options: {
       folder: string;
       ext: string;
@@ -105,7 +109,7 @@ export class StorageService implements OnModuleInit {
   ): Promise<void> {
     const objectPath = this.getObjectPath(id, options.folder, options.ext);
     const buffer =
-      typeof data === 'string' ? Buffer.from(data, 'base64') : data;
+      typeof data === "string" ? Buffer.from(data, "base64") : data;
 
     await this.getBucket()
       .file(objectPath)
@@ -135,7 +139,7 @@ export class StorageService implements OnModuleInit {
     }
 
     const [metadata] = await file.getMetadata();
-    const contentType = metadata.contentType ?? 'application/octet-stream';
+    const contentType = metadata.contentType ?? "application/octet-stream";
     const size = Number(metadata.size ?? 0);
 
     return {
