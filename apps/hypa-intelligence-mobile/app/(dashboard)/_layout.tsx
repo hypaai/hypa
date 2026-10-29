@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { BookA, Keyboard, Languages, Settings } from 'lucide-react-native';
+import { BookA, Languages, MessagesSquare, Settings } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/use-theme-color';
 
@@ -10,9 +10,15 @@ const IosTabs = () => {
 
   return (
     <NativeTabs tintColor={colors.tabBarActive} minimizeBehavior="onScrollDown">
-      <NativeTabs.Trigger name="home" disableAutomaticContentInsets>
-        <NativeTabs.Trigger.Icon sf="keyboard" md="keyboard" />
-        <NativeTabs.Trigger.Label>Keyboard</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="chat" disableAutomaticContentInsets>
+        <NativeTabs.Trigger.Icon
+          sf={{
+            default: 'bubble.left.and.text.bubble.right',
+            selected: 'bubble.left.and.text.bubble.right.fill',
+          }}
+          md="chat"
+        />
+        <NativeTabs.Trigger.Label>Chat</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger
         name="translate"
@@ -69,10 +75,10 @@ const AndroidTabs = () => {
         },
       }}>
       <Tabs.Screen
-        name="home"
+        name="chat"
         options={{
-          title: 'Keyboard',
-          tabBarIcon: ({ color }) => <Keyboard size={24} color={color} strokeWidth={2.2} />,
+          title: 'Chat',
+          tabBarIcon: ({ color }) => <MessagesSquare size={24} color={color} strokeWidth={2.2} />,
         }}
       />
       <Tabs.Screen

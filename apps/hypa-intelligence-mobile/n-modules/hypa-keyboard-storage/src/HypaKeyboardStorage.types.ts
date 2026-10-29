@@ -41,6 +41,8 @@ export type KeyboardSettings = {
   ttsModel: string;
   sttProvider: string;
   sttModel: string;
+  assistantProvider: string;
+  assistantModel: string;
   voice: string;
   ttsLanguage: string;
   dictionaryLanguage: string;

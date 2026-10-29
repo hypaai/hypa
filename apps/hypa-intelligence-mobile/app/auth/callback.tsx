@@ -107,7 +107,7 @@ const Callback = () => {
     <Body showBackground={false}>
       <View className="flex-1 px-2">
         {status === 'loading' ? <LoadingState /> : null}
-        {status === 'success' ? <SuccessState onContinue={() => router.replace('/home')} /> : null}
+        {status === 'success' ? <SuccessState onContinue={() => router.replace('/chat')} /> : null}
         {status === 'error' ? (
           <ErrorState
             errorMessage={errorMessage}

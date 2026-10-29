@@ -20,6 +20,8 @@ import {
 import { useFocusEffect } from 'expo-router';
 import { isHypaKeyboardEnabled, showInputMethodPicker } from 'hypa-keyboard-input-method-picker';
 
+import { MODELS, getAssistantModels } from '@hypa/config/models';
+
 import { SelectorModal, SettingsItem, StepperItem } from '@/components/modules/settings';
 import Body from '@/components/shared/body';
 import { Text } from '@/components/ui/text';
@@ -69,6 +71,7 @@ const Settings = () => {
   const { settings, isLoading: isLoadingSettings, updateSettings } = useKeyboardSettings();
   const dictionaryModelLanguages = useDictionaryModelLanguages();
   const keyboardLanguages = useKeyboardLayoutLanguages();
+  // Translate source/target options come from models.json (selected MT model).
   const translateSourceLanguages = useTranslationSourceLanguages();
   const translateTargetLanguages = useTranslationTargetLanguages();
   const colors = useThemeColors();
@@ -113,6 +116,7 @@ const Settings = () => {
   const [dictionaryLanguageModalVisible, setDictionaryLanguageModalVisible] = useState(false);
   const [keyboardLanguageModalVisible, setKeyboardLanguageModalVisible] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
+  const [assistantModalVisible, setAssistantModalVisible] = useState(false);
 
   const dismissSelectorModals = useCallback(() => {
     setTranslationProviderModalVisible(false);
@@ -130,6 +134,7 @@ const Settings = () => {
     setDictionaryLanguageModalVisible(false);
     setKeyboardLanguageModalVisible(false);
     setThemeModalVisible(false);
+    setAssistantModalVisible(false);
   }, []);
 
   useFocusEffect(
@@ -139,6 +144,18 @@ const Settings = () => {
       };
     }, [dismissSelectorModals])
   );
+
+  const assistantModels = useMemo(
+    () =>
+      Object.keys(MODELS).flatMap((provider) =>
+        getAssistantModels(provider).map((model) => ({
+          name: `${provider}/${model.name}`,
+          displayName: model.displayName || model.name,
+        }))
+      ),
+    []
+  );
+  const selectedAssistant = `${settings?.assistantProvider ?? DEFAULT_KEYBOARD_SETTINGS.assistantProvider}/${settings?.assistantModel ?? DEFAULT_KEYBOARD_SETTINGS.assistantModel}`;
 
   const updateSetting = async (key: keyof KeyboardSettings, value: any) => {
     if (!settings) return;
@@ -308,10 +325,10 @@ const Settings = () => {
   return (
     <Body
       showBackground={false}
-     
       enableScroll={false}
       hideBottomInset={process.env.EXPO_OS !== 'ios'}>
       <View className="flex-1 px-1 pt-4">
+        {/* Header */}
         <View className="mb-6 items-center">
           <Text
             className="text-[20px] text-zinc-900 dark:text-zinc-50"
@@ -324,6 +341,7 @@ const Settings = () => {
           className="flex-1"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 40 }}>
+          {/* General Settings */}
           <View className="mt-2">
             <Text
               className="px-2 pb-3 text-[12px] tracking-[1.5px] text-zinc-400 uppercase dark:text-zinc-500"
@@ -346,6 +364,7 @@ const Settings = () => {
             </View>
           </View>
 
+          {/* Typing Experience */}
           <View>
             <Text
               className="px-2 pb-3 text-[12px] tracking-[1.5px] text-zinc-400 uppercase dark:text-zinc-500"
@@ -444,6 +463,7 @@ const Settings = () => {
             </View>
           </View>
 
+          {/* Keyboard Settings */}
           <View className="mb-4">
             <Text
               className="px-2 pb-3 text-[12px] tracking-[1.5px] text-zinc-400 uppercase dark:text-zinc-500"
@@ -513,6 +533,29 @@ const Settings = () => {
             </View>
           </View>
 
+          {/* Assistant */}
+          <View className="mb-4">
+            <Text
+              className="px-2 pb-3 text-[12px] tracking-[1.5px] text-zinc-400 uppercase dark:text-zinc-500"
+              style={{ fontFamily: FONTS.main.medium }}>
+              Assistant
+            </Text>
+            <View className="mb-8 rounded-3xl border border-zinc-100 bg-white px-3 py-1 dark:border-zinc-800 dark:bg-zinc-950">
+              <SettingsItem
+                icon={WandSparkles}
+                title="Assistant model"
+                value={
+                  assistantModels.find((model) => model.name === selectedAssistant)?.displayName ??
+                  'Muse Spark'
+                }
+                hasChevron
+                isLast
+                onPress={() => setAssistantModalVisible(true)}
+              />
+            </View>
+          </View>
+
+          {/* Translate */}
           <View className="mb-4">
             <Text
               className="px-2 pb-3 text-[12px] tracking-[1.5px] text-zinc-400 uppercase dark:text-zinc-500"
@@ -604,6 +647,7 @@ const Settings = () => {
             </View>
           </View>
 
+          {/* Dictionary */}
           <View className="mb-4">
             <Text
               className="px-2 pb-3 text-[12px] tracking-[1.5px] text-zinc-400 uppercase dark:text-zinc-500"
@@ -645,6 +689,7 @@ const Settings = () => {
             </View>
           </View>
 
+          {/* TTS */}
           <View className="mb-4">
             <Text
               className="px-2 pb-3 text-[12px] tracking-[1.5px] text-zinc-400 uppercase dark:text-zinc-500"
@@ -687,6 +732,7 @@ const Settings = () => {
             </View>
           </View>
 
+          {/* STT */}
           <View className="mb-4">
             <Text
               className="px-2 pb-3 text-[12px] tracking-[1.5px] text-zinc-400 uppercase dark:text-zinc-500"
@@ -713,6 +759,7 @@ const Settings = () => {
             </View>
           </View>
 
+          {/* Dictionary & Data */}
           <View>
             <Text
               className="px-2 pb-3 text-[12px] tracking-[1.5px] text-zinc-400 uppercase dark:text-zinc-500"
@@ -738,6 +785,7 @@ const Settings = () => {
             </View>
           </View>
 
+          {/* App Version Footer */}
           <View className="mt-4 mb-8 items-center">
             <Text
               className="text-[13px] text-zinc-400 dark:text-zinc-500"
@@ -748,6 +796,20 @@ const Settings = () => {
         </ScrollView>
       </View>
 
+      <SelectorModal
+        visible={assistantModalVisible}
+        title="Assistant model"
+        options={assistantModels}
+        selected={selectedAssistant}
+        onSelect={(value) => {
+          const [provider, model] = value.split('/');
+          if (!provider || !model) return;
+          void updateSettings({ assistantProvider: provider, assistantModel: model });
+        }}
+        onClose={() => setAssistantModalVisible(false)}
+      />
+
+      {/* Translate Provider Selector */}
       <SelectorModal
         visible={translationProviderModalVisible}
         title="Translate Provider"
@@ -779,6 +841,7 @@ const Settings = () => {
         onClose={() => setTranslationProviderModalVisible(false)}
       />
 
+      {/* Dictionary Provider Selector */}
       <SelectorModal
         visible={dictionaryProviderModalVisible}
         title="Dictionary Provider"
@@ -810,6 +873,7 @@ const Settings = () => {
         onClose={() => setDictionaryProviderModalVisible(false)}
       />
 
+      {/* TTS Provider Selector */}
       <SelectorModal
         visible={ttsProviderModalVisible}
         title="TTS Provider"
@@ -841,6 +905,7 @@ const Settings = () => {
         onClose={() => setTtsProviderModalVisible(false)}
       />
 
+      {/* STT Provider Selector */}
       <SelectorModal
         visible={sttProviderModalVisible}
         title="STT Provider"
@@ -856,6 +921,7 @@ const Settings = () => {
         onClose={() => setSttProviderModalVisible(false)}
       />
 
+      {/* Translation Model Selector */}
       <SelectorModal
         visible={translationModelModalVisible}
         title="Translation Model"
@@ -885,6 +951,7 @@ const Settings = () => {
         onClose={() => setTranslationModelModalVisible(false)}
       />
 
+      {/* Dictionary Model Selector */}
       <SelectorModal
         visible={dictionaryModelModalVisible}
         title="Dictionary Model"
@@ -914,6 +981,7 @@ const Settings = () => {
         onClose={() => setDictionaryModelModalVisible(false)}
       />
 
+      {/* TTS Selector */}
       <SelectorModal
         visible={ttsModalVisible}
         title="Text-to-Speech"
@@ -943,6 +1011,7 @@ const Settings = () => {
         onClose={() => setTtsModalVisible(false)}
       />
 
+      {/* STT Selector */}
       <SelectorModal
         visible={sttModalVisible}
         title="Speech-to-Text"
@@ -952,6 +1021,7 @@ const Settings = () => {
         onClose={() => setSttModalVisible(false)}
       />
 
+      {/* TTS Language Selector */}
       <SelectorModal
         visible={ttsLanguageModalVisible}
         title="TTS Language"
@@ -983,6 +1053,7 @@ const Settings = () => {
         onClose={() => setTtsLanguageModalVisible(false)}
       />
 
+      {/* Voice Selector */}
       <SelectorModal
         visible={voiceModalVisible}
         title="Voice"
@@ -1096,6 +1167,9 @@ const Settings = () => {
         onSelect={(val) => {
           const preset = THEME_PRESETS.find((item) => item.id === val);
           if (!preset) return;
+          // A theme is one setting even though it is stored as an appearance plus two palettes.
+          // Persist the three fields together so concurrent full-settings writes cannot overwrite
+          // one another and leave the keyboard with only part of the selected preset.
           void updateSettings((current) => ({
             ...current,
             appearance: preset.appearance,

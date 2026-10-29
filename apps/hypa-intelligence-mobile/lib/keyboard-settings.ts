@@ -16,6 +16,8 @@ import {
   THEME_PRESETS,
   type Appearance,
 } from '@/constants/app';
+import { isAssistantModel } from '@hypa/config/models';
+
 import { AUTO_DETECT_LANGUAGE, resolveProviderModelForGroup } from '@/lib/model-languages';
 
 export { KeyboardSettings };
@@ -34,6 +36,8 @@ export const DEFAULT_KEYBOARD_SETTINGS: KeyboardSettings = {
   ttsModel: DEFAULT_TTS_MODEL,
   sttProvider: DEFAULT_MODEL_PROVIDER,
   sttModel: DEFAULT_STT_MODEL,
+  assistantProvider: 'meta',
+  assistantModel: 'muse-spark-1.3',
   voice: 'Eniola',
   ttsLanguage: 'en',
   dictionaryLanguage: 'English',
@@ -124,6 +128,15 @@ export function parseKeyboardSettings(json: string): KeyboardSettings {
       DEFAULT_KEYBOARD_SETTINGS.sttProvider,
       DEFAULT_KEYBOARD_SETTINGS.sttModel,
     );
+    const assistant =
+      typeof parsed.assistantProvider === 'string' &&
+      typeof parsed.assistantModel === 'string' &&
+      isAssistantModel(parsed.assistantProvider, parsed.assistantModel)
+        ? { provider: parsed.assistantProvider, model: parsed.assistantModel }
+        : {
+            provider: DEFAULT_KEYBOARD_SETTINGS.assistantProvider,
+            model: DEFAULT_KEYBOARD_SETTINGS.assistantModel,
+          };
     return {
       languageId:
         typeof parsed.languageId === 'string'
@@ -139,6 +152,8 @@ export function parseKeyboardSettings(json: string): KeyboardSettings {
       ttsModel: tts.model,
       sttProvider: stt.provider,
       sttModel: stt.model,
+      assistantProvider: assistant.provider,
+      assistantModel: assistant.model,
       voice: typeof parsed.voice === 'string' ? parsed.voice : DEFAULT_KEYBOARD_SETTINGS.voice,
       ttsLanguage:
         typeof parsed.ttsLanguage === 'string' && parsed.ttsLanguage.trim()

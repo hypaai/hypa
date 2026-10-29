@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { Dimensions, Platform, Pressable, StyleSheet, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import {
@@ -27,7 +27,7 @@ const TOAST_MARGIN = 16;
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
-interface ToastProps {
+export interface ToastProps {
   id: string;
   type: ToastType;
   title: string;

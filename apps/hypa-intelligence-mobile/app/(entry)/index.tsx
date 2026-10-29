@@ -54,7 +54,7 @@ const Home = () => {
   };
 
   if (user) {
-    return <Redirect href="/home" />;
+    return <Redirect href="/chat" />;
   }
 
   return (
@@ -104,7 +104,7 @@ const Home = () => {
             />
           )}
           <Button
-            onPress={() => router.navigate('/home')}
+            onPress={() => router.navigate('/chat')}
             variant={'ghost'}
             className="h-14 w-84"
             size={'lg'}>

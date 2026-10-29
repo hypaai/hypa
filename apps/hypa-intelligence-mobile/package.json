@@ -19,6 +19,7 @@
   "dependencies": {
     "@expo-google-fonts/outfit": "^0.4.3",
     "@hypa/config": "workspace:*",
+    "@hypa/intelligence-core": "workspace:*",
     "@hypa/translate-core": "workspace:*",
     "@lottiefiles/dotlottie-react": "^0.13.5",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -37,10 +38,13 @@
     "expo-audio": "~55.0.6",
     "expo-clipboard": "~8.0.7",
     "expo-constants": "~55.0.15",
+    "expo-crypto": "~55.0.19",
     "expo-dev-client": "~55.0.28",
     "expo-file-system": "~55.0.22",
     "expo-glass-effect": "~55.0.11",
     "expo-haptics": "~55.0.9",
+    "expo-image-manipulator": "~55.0.21",
+    "expo-image-picker": "~55.0.24",
     "expo-linking": "~55.0.14",
     "expo-router": "~55.0.13",
     "expo-sharing": "~55.0.21",
@@ -54,11 +58,11 @@
     "hypa-keyboard-storage": "link:./n-modules/hypa-keyboard-storage",
     "lottie-react-native": "~7.3.4",
     "lucide-react-native": "^0.545.0",
-    "posthog-react-native": "^4.80.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.6",
     "react-native-gesture-handler": "~2.30.0",
+    "react-native-markdown-display": "^7.0.2",
     "react-native-reanimated": "4.2.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.23.0",
@@ -73,10 +77,10 @@
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",
+    "@types/node": "^24.10.0",
     "@types/react": "~19.2.10",
     "tsx": "^4.21.0",
-    "typescript": "~5.9.2",
-    "@types/node": "^24.10.0"
+    "typescript": "~5.9.2"
   },
   "optionalDependencies": {
     "lightningcss-linux-x64-gnu": "1.32.0"
