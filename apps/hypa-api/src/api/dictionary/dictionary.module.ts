@@ -6,7 +6,7 @@ import { WordOfTheDayService } from './word-of-the-day.service';
 
 @Module({
   controllers: [DictionaryController, WordOfTheDayController],
-  providers: [DictionaryService, WordOfTheDayService],
-  exports: [WordOfTheDayService],
+  providers: [DictionaryService, WordOfTheDayService, DictionaryController],
+  exports: [WordOfTheDayService, DictionaryController],
 })
 export class DictionaryModule {}

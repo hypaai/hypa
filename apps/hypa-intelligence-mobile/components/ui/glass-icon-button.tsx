@@ -8,10 +8,20 @@ type Props = {
   onPress?: () => void;
   size?: number;
   fallbackClassName?: string;
+  accessibilityLabel?: string;
+  disabled?: boolean;
   children: React.ReactNode;
 };
 
-export function GlassIconButton({ onPress, size = 44, fallbackClassName, children }: Props) {
+export function GlassIconButton({
+  onPress,
+  size = 44,
+  fallbackClassName,
+  accessibilityLabel,
+  disabled,
+  children,
+}: Props) {
+  const a11y = { accessibilityRole: 'button' as const, accessibilityLabel, disabled };
   const shape = {
     width: size,
     height: size,
@@ -23,18 +33,20 @@ export function GlassIconButton({ onPress, size = 44, fallbackClassName, childre
   if (!isLiquidGlassAvailable()) {
     return (
       <TouchableOpacity
+        {...a11y}
         onPress={onPress}
         activeOpacity={0.7}
         className={fallbackClassName}
-        style={shape}>
+        style={[shape, disabled && { opacity: 0.4 }]}>
         {children}
       </TouchableOpacity>
     );
   }
 
   return (
-    <GlassView isInteractive style={shape}>
+    <GlassView isInteractive style={[shape, disabled && { opacity: 0.4 }]}>
       <Pressable
+        {...a11y}
         onPress={onPress}
         style={{ flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center' }}>
         {children}

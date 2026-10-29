@@ -27,9 +27,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useUniwind } from 'uniwind';
 import { useEffect } from 'react';
-import { AppState } from 'react-native';
-import { reopenTracker } from '@hypa/config/analytics-native';
-import { analytics } from '@/lib/analytics';
 import { captureInstallReferralCode } from '@/lib/install-referrer';
 import { captureClipboardReferralCode } from '@/lib/clipboard-referrer';
 
@@ -39,16 +36,6 @@ export {
 
 export default function RootLayout() {
   const { theme } = useUniwind();
-
-  useEffect(() => {
-    analytics.start();
-    const subscription = AppState.addEventListener(
-      'change',
-      reopenTracker(() => analytics.appOpened())
-    );
-
-    return () => subscription.remove();
-  }, []);
 
   useEffect(() => {
     void (async () => {

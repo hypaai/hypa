@@ -1,0 +1,10 @@
+{
+  "title": "Chat",
+  "points": [
+    "Without an account, chats aren't saved. A chat lasts until you reload or start a new one. A finished answer is held for up to 15 minutes so it can be picked up if your connection drops, then deleted.",
+    "With an account, your prompts and answers are saved to your chats until you delete them. Deleting a chat removes its audio and images.",
+    "Your messages, voice recordings and photos are used only to answer you. Voice is turned into text and then discarded.",
+    "When you ask from the Hypa keyboard, the text in the field you are typing in is sent only to answer and is never stored.",
+    "We record how much each request used (model, tool and cost), without your messages, to keep the service running."
+  ]
+}

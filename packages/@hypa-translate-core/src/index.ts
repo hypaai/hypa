@@ -3,7 +3,21 @@ import {
   MODELS_BY_CAPABILITY as modelsJson,
   supportsExplanation,
 } from "@hypa/config/models";
-export { attachThinking, parseTranslation } from "./thinking";
+import { hydrateTranslationThinking } from "./thinking.ts";
+
+export {
+  attachThinking,
+  hydrateTranslationThinking,
+  parseTranslation,
+  type ParsedTranslation,
+} from "./thinking.ts";
+export {
+  applyTranslationThinking,
+  type SetThinkingHistoryQueryData,
+  type ThinkingHistoryCache,
+  type ThinkingHistoryItem,
+  type ThinkingHistoryQueryKey,
+} from "./thinking-history.ts";
 
 type ModelGroup = "AC" | "MT" | "TTS" | "ASR" | "OCR";
 
@@ -31,7 +45,7 @@ export const hasThinking = (modelName?: string) => {
   );
 };
 
-const normalizeVoice = (voice?: string, fallback = "Juliet") =>
+export const normalizeVoice = (voice?: string, fallback = "Juliet") =>
   !voice || voice.toLowerCase().trim() === "auto" ? fallback : voice;
 
 const findProviderForModel = (
@@ -50,7 +64,7 @@ const findProviderForModel = (
   return undefined;
 };
 
-const getProvider = (
+export const getProvider = (
   modelName: string | undefined,
   fallback: string,
   group: ModelGroup,
@@ -77,12 +91,32 @@ const getDefaultModelName = (group: ModelGroup, preferredProvider?: string) => {
   );
 };
 
+export const getCatalogMtModelName = () => getDefaultModelName("MT", "hypaai");
+
 const getDefaultMtModelName = () => {
   const preferredModels = modelOptionsConfig.MT?.hypaai || [];
   return (
     preferredModels.find((model) => model.default)?.name ||
-    getDefaultModelName("MT", "hypaai")
+    getCatalogMtModelName()
   );
+};
+
+const resolveConfiguredModelName = (
+  group: ModelGroup,
+  modelName?: string,
+  provider?: string,
+) => {
+  const models = getProviderModels(group, provider);
+  const normalized = modelName?.trim().toLowerCase();
+  const match = normalized
+    ? models.find(
+        (model) =>
+          model.name.toLowerCase() === normalized ||
+          model.displayName?.toLowerCase() === normalized,
+      )
+    : undefined;
+
+  return match?.name || getDefaultModelName(group, provider);
 };
 
 export const TRANSLATE_ENDPOINTS = {
@@ -97,13 +131,22 @@ export const TRANSLATE_ENDPOINTS = {
   profile: "/profile/me",
 } as const;
 
+export const translationEndpoint = (translationId: string) =>
+  `/v2/translate/${translationId}`;
+
+export const bookmarkEndpoint = (translationId: string) =>
+  `${translationEndpoint(translationId)}/bookmark`;
+
+export const feedbackEndpoint = (translationId: string) =>
+  `${translationEndpoint(translationId)}/feedback`;
+
 export const createTranslationId = () =>
   `translation-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-const stripDataUrl = (value: string) =>
+export const stripDataUrl = (value: string) =>
   value.includes(",") ? value.split(",").pop() || value : value;
 
-const extractDataUrlMimeType = (value: string): string | undefined => {
+export const extractDataUrlMimeType = (value: string): string | undefined => {
   const match = /^data:([^;,]+)/.exec(value);
   return match?.[1];
 };
@@ -118,10 +161,10 @@ export const isAutoDetectLanguage = (value?: string | null) => {
   );
 };
 
-const normalizeSourceLanguage = (sourceLang?: string) =>
+export const normalizeSourceLanguage = (sourceLang?: string) =>
   isAutoDetectLanguage(sourceLang) ? undefined : sourceLang?.trim();
 
-const resolveThinkingSourceLanguage = (
+export const resolveThinkingSourceLanguage = (
   sourceLang?: string | null,
   detectedLanguage?: string | null,
   fallback = "English",
@@ -135,7 +178,7 @@ const resolveThinkingSourceLanguage = (
   return fallback;
 };
 
-interface TranslateAPIParams {
+export interface TranslateAPIParams {
   targetLang: string;
   text: string;
   sourceLang?: string;
@@ -143,7 +186,7 @@ interface TranslateAPIParams {
   thinkingMode?: boolean;
 }
 
-interface TranslateAPIResponse {
+export interface TranslateAPIResponse {
   translation: string;
   language: string | null;
   id?: string | null;
@@ -187,6 +230,10 @@ export interface TranslateThinkingAPIParams {
   translationModel?: string | null;
   detectedLanguage?: string | null;
   translationId?: string | null;
+}
+
+export interface TranslateThinkingAPIResponse {
+  thinking: string;
 }
 
 export const buildMtThinkingRequest = (params: TranslateThinkingAPIParams) => {
@@ -248,13 +295,13 @@ export const mapMtResponse = (
   };
 };
 
-interface TextToSpeechAPIParams {
+export interface TextToSpeechAPIParams {
   text: string;
   voice: string;
   ttsModel?: string;
 }
 
-interface TextToSpeechAPIResponse {
+export interface TextToSpeechAPIResponse {
   audio_b64: string;
   audio_sample?: number[];
   sample_rate?: number;
@@ -306,6 +353,194 @@ export const buildSttRequest = (params: {
 export const unwrapSttResponse = (data: unknown) => {
   const record = data as { response?: { text?: string }; text?: string };
   return record.response?.text || record.text || "";
+};
+
+export const buildOcrRequest = (params: {
+  image: string;
+  imageType?: "base64" | "url";
+  ocrModel?: string;
+}) => {
+  const provider = getProvider(params.ocrModel, "openai", "OCR");
+  const model = resolveConfiguredModelName("OCR", params.ocrModel, provider);
+
+  return {
+    image:
+      params.imageType === "url" ? params.image : stripDataUrl(params.image),
+    image_type: params.imageType ?? "base64",
+    model,
+    provider,
+    temperature: 0,
+    max_tokens: 1000,
+  };
+};
+
+export const unwrapOcrResponse = (data: unknown) => {
+  const record = data as { response?: { text?: string }; text?: string };
+  return record.response?.text || record.text || "";
+};
+
+export interface TranslationHistoryItem {
+  id: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  originalText: string;
+  translatedText: string;
+  bookmarked?: boolean;
+  liked?: boolean | null;
+  correction?: string;
+  timestamp?: string;
+}
+
+export interface TranslationRecord {
+  id: string;
+  client_request_id?: string | null;
+  input_text?: string;
+  output_text?: string;
+  source_lang?: string | null;
+  target_lang?: string | null;
+  bookmarked?: boolean;
+  liked?: boolean | null;
+  correction?: string | null;
+  thinking?: string | null;
+  created_at?: string;
+}
+
+export const HISTORY_PAGE_SIZE = 50;
+
+export interface HistoryResponsePayload {
+  nextCursor: string | null;
+  data: TranslationRecord[];
+}
+
+export interface TranslationStats {
+  total: number;
+  corrections: number;
+}
+
+export interface GetTranslationHistoryResponse {
+  translations: TranslationHistoryItem[];
+  meta: {
+    nextCursor: string | null;
+  };
+}
+
+export const mapTranslationRecord = (
+  item: TranslationRecord,
+): TranslationHistoryItem => {
+  return {
+    id: item.client_request_id || item.id,
+    sourceLanguage: item.source_lang || "Auto-detect",
+    targetLanguage: item.target_lang || "",
+    originalText: item.input_text || "",
+    translatedText: hydrateTranslationThinking(
+      item.output_text || "",
+      item.thinking,
+    ),
+    bookmarked: !!item.bookmarked,
+    liked: item.liked ?? null,
+    correction: item.correction ?? undefined,
+    timestamp: item.created_at,
+  };
+};
+
+export const mapHistoryResponse = (
+  response: HistoryResponsePayload,
+): GetTranslationHistoryResponse => ({
+  translations: (response.data || []).map(mapTranslationRecord),
+  meta: { nextCursor: response.nextCursor },
+});
+
+export const appendHistoryPage = (
+  current: GetTranslationHistoryResponse | undefined,
+  next: GetTranslationHistoryResponse,
+): GetTranslationHistoryResponse => {
+  const shown = new Set((current?.translations ?? []).map((item) => item.id));
+  return {
+    translations: [
+      ...(current?.translations ?? []),
+      ...next.translations.filter((item) => !shown.has(item.id)),
+    ],
+    meta: next.meta,
+  };
+};
+
+export const prependHistoryItem = (
+  current: GetTranslationHistoryResponse | undefined,
+  item: TranslationHistoryItem,
+): GetTranslationHistoryResponse => ({
+  translations: [
+    item,
+    ...(current?.translations ?? []).filter((entry) => entry.id !== item.id),
+  ],
+  meta: current?.meta ?? { nextCursor: null },
+});
+
+export const applyBookmark = (
+  history: GetTranslationHistoryResponse | undefined,
+  id: string,
+  bookmarked: boolean,
+): GetTranslationHistoryResponse | undefined =>
+  history && {
+    ...history,
+    translations: history.translations.map((item) =>
+      item.id === id ? { ...item, bookmarked } : item,
+    ),
+  };
+
+export interface DictionaryRequest {
+  word: string;
+  language?: string;
+  model?: string;
+  provider?: string;
+  temperature?: number;
+  max_tokens?: number;
+}
+
+export const buildDictionaryRequest = (params: DictionaryRequest) => {
+  const requestedProvider = params.provider?.trim();
+  const provider =
+    requestedProvider || getProvider(params.model, AUTO_ROUTER_PROVIDER, "MT");
+
+  if (
+    provider === AUTO_ROUTER_PROVIDER ||
+    params.model?.trim().toLowerCase() === AUTO_ROUTER_PROVIDER
+  ) {
+    return {
+      word: params.word,
+      language: params.language || "English",
+      provider: AUTO_ROUTER_PROVIDER,
+      model_name: undefined,
+      temperature: params.temperature,
+      output_length: params.max_tokens,
+      cultural_context: false,
+      fun_facts: false,
+      seeMore: true,
+    };
+  }
+
+  const providerModels = getProviderModels("AC", provider);
+  const selectedModel = providerModels.find(
+    (model) => model.name.toLowerCase() === params.model?.trim().toLowerCase(),
+  );
+  const resolvedProvider =
+    providerModels.length > 0 ? provider : AUTO_ROUTER_PROVIDER;
+  const model =
+    resolvedProvider === AUTO_ROUTER_PROVIDER
+      ? undefined
+      : (selectedModel?.name ??
+        resolveConfiguredModelName("AC", undefined, resolvedProvider));
+
+  return {
+    word: params.word,
+    language: params.language || "English",
+    provider: resolvedProvider,
+    model_name: model,
+    temperature: params.temperature,
+    output_length: params.max_tokens,
+    cultural_context: false,
+    fun_facts: false,
+    seeMore: true,
+  };
 };
 
 const parseMaybeJson = (value: string): unknown => {
@@ -455,7 +690,7 @@ const readSseEvents = (responseText: string) => {
   return events;
 };
 
-const getMtSseError = (responseText: string) => {
+export const getMtSseError = (responseText: string) => {
   const errorEvent = readSseEvents(responseText).find(
     (event) => event.event === "error",
   );
@@ -469,7 +704,7 @@ const getMtSseError = (responseText: string) => {
   return rawMessage;
 };
 
-const handleMtEndpointResponse = (responseText: string) => {
+export const handleMtEndpointResponse = (responseText: string) => {
   const trimmed = responseText.trim();
   const sseError = getMtSseError(trimmed);
   if (sseError) throw new Error(sseError);

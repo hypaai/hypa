@@ -10,5 +10,11 @@
   },
   "dependencies": {
     "@hypa/config": "workspace:*"
+  },
+  "scripts": {
+    "test": "tsx --test src/*.test.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
   }
 }

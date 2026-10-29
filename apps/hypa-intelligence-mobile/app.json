@@ -59,6 +59,13 @@
         {
           "microphonePermission": "Hypa Intelligence uses your microphone only when you tap and hold the voice button to capture speech for translation and speech-to-text. For example, if you say 'How much is this?', we record that clip, convert it to text, and return the translation."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Hypa Intelligence opens your photos only when you attach one to a chat, for example a form, receipt or handwritten order you want read, explained or translated.",
+          "cameraPermission": "Hypa Intelligence uses the camera only when you take a photo to attach to a chat, for example a form, receipt or handwritten order you want read, explained or translated."
+        }
       ]
     ],
     "owner": "hypa",

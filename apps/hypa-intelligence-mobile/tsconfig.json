@@ -22,7 +22,8 @@
       "hypa-keyboard-storage/*": [
         "./n-modules/hypa-keyboard-storage/*"
       ]
-    }
+    },
+    "allowImportingTsExtensions": true
   },
   "include": [
     "**/*.ts",
@@ -30,6 +31,7 @@
   ],
   "exclude": [
     "node_modules",
-    "plugins"
+    "plugins",
+    "**/*.test.ts"
   ]
 }

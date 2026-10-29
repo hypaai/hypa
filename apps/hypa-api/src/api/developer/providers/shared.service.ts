@@ -37,7 +37,6 @@ import { UserQueue } from 'src/queues/users-queue/user.queue';
 
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
-import { recordUsageInContext } from 'src/libs/analytics/request-context';
 
 interface getModelInfoParams {
   provider: providerKey;
@@ -163,6 +162,11 @@ export class DeveloperSharedService {
     return wallet;
   }
 
+  async hasBalance(userId: string, cost: number) {
+    const wallet = await this.getUserWallet(userId);
+    return Number(wallet.balance) >= cost;
+  }
+
   async checkBalance(userId: string, cost: number) {
     const wallet = await this.getUserWallet(userId);
     const currentBalance = Number(wallet.balance);
@@ -238,15 +242,6 @@ export class DeveloperSharedService {
       Debug.error('NO RATES OR USAGE OR USER ID OR API KEY ID');
       return;
     }
-    recordUsageInContext({
-      type,
-      body,
-      usage,
-      chargeType,
-      audioDurationSeconds,
-      characterCount,
-      actualCost,
-    });
     await this.userQueue.recordDevRequest({
       body: JSON.parse(JSON.stringify({ ...body, audio: undefined })),
       type,
@@ -275,7 +270,6 @@ export class DeveloperSharedService {
       ) {
         throw new Error('Invalid completed request metadata');
       }
-      recordUsageInContext(params);
       await this.userQueue.recordCompletedDevRequest({
         ...record,
         historyId,

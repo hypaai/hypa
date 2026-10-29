@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import './libs/analytics/tracing';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
@@ -10,7 +9,6 @@ import path from 'path';
 import { DelayedWsAdapter } from './delayed-ws.adapter';
 import { PodService } from './api/developer/ws/pod.service';
 import { WsAuthService } from './api/developer/ws/ws-auth.service';
-import { requestContextMiddleware } from './libs/analytics/request-context';
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
@@ -45,7 +43,6 @@ async function bootstrap() {
     next();
   });
 
-  app.use(requestContextMiddleware);
 
   app.useGlobalPipes(
     new ValidationPipe({

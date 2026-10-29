@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ApiModule } from './api/api.module';
 import { DbModule } from './libs/db/db.module';
-import { AnalyticsModule } from './libs/analytics/analytics.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import {
   THROTTLE_BLOCK_DURATION,
@@ -106,7 +105,6 @@ function getRedisUrl(configService: ConfigService) {
       }),
     }),
     DbModule,
-    AnalyticsModule,
   ],
   controllers: [],
   providers: [],

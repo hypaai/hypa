@@ -57,10 +57,14 @@
     <array>
       <string>_expo._tcp</string>
     </array>
+    <key>NSCameraUsageDescription</key>
+    <string>Hypa Intelligence uses the camera only when you take a photo to attach to a chat, for example a form, receipt or handwritten order you want read, explained or translated.</string>
     <key>NSLocalNetworkUsageDescription</key>
     <string>Expo Dev Launcher uses the local network to discover and connect to development servers running on your computer.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Hypa Intelligence uses your microphone only when you tap and hold the voice button to capture speech for translation and speech-to-text. For example, if you say 'How much is this?', we record that clip, convert it to text, and return the translation.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Hypa Intelligence opens your photos only when you attach one to a chat, for example a form, receipt or handwritten order you want read, explained or translated.</string>
     <key>NSUserActivityTypes</key>
     <array>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>

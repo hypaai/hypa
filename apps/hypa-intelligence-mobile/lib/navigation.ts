@@ -4,7 +4,7 @@ export const withReturnTo = (returnTo: string) => ({ returnTo });
 
 export const goBackOrReturnTo = (
   returnTo?: string | string[],
-  fallback: string = '/home'
+  fallback: string = '/chat'
 ) => {
   const target = Array.isArray(returnTo) ? returnTo[0] : returnTo;
 

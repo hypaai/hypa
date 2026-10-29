@@ -37,6 +37,7 @@ type BottomSheetContentProps = {
   rBottomSheetStyle: any;
   cardColor: string;
   mutedColor: string;
+  onHandlePress?: () => void;
   scrollEnabled?: boolean;
   handleWidth?: number;
   handleHeight?: number;
@@ -49,6 +50,8 @@ type BottomSheetContentProps = {
   bottomInset?: number;
 };
 
+// Component for the bottom sheet content
+// It now includes a ScrollView by default for better form handling.
 const BottomSheetContent = ({
   children,
   title,
@@ -56,6 +59,7 @@ const BottomSheetContent = ({
   rBottomSheetStyle,
   cardColor,
   mutedColor,
+  onHandlePress,
   scrollEnabled = true,
   handleWidth = 64,
   handleHeight = 6,
@@ -83,6 +87,8 @@ const BottomSheetContent = ({
         rBottomSheetStyle,
         style,
       ]}>
+      {/* Handle */}
+      {/* <TouchableWithoutFeedback onPress={onHandlePress}> */}
       <View
         style={{
           width: '100%',
@@ -98,7 +104,9 @@ const BottomSheetContent = ({
           }}
         />
       </View>
+      {/* </TouchableWithoutFeedback> */}
 
+      {/* Title */}
       {title && (
         <View
           style={{
@@ -114,6 +122,7 @@ const BottomSheetContent = ({
         </View>
       )}
 
+      {/* Content now wrapped in a ScrollView */}
       {scrollEnabled ? (
         <ScrollView
           style={{ flex: 1 }}
@@ -183,6 +192,7 @@ export function BottomSheet({
   headerPaddingHorizontal,
   sheetBorderRadius,
 }: BottomSheetProps) {
+  const cardColor = useColor('surface');
   const mutedColor = useColor('textMuted');
   const backgroundColor = useColor('background');
   const { keyboardHeight, isKeyboardVisible } = useKeyboardHeight();
@@ -192,11 +202,13 @@ export function BottomSheet({
   const context = useSharedValue({ y: 0 });
   const opacity = useSharedValue(0);
   const currentSnapIndex = useSharedValue(0);
+  // Shared value to hold keyboard height for use in worklets
   const keyboardHeightSV = useSharedValue(0);
 
   const snapPointsKey = snapPoints.join(',');
   const stableSnapPoints = useMemo(() => [...snapPoints].sort((a, b) => a - b), [snapPointsKey]);
 
+  // On Android, offset snap points by inset.bottom so the sheet clears the navigation bar
   const adjustedSnapPoints = useMemo(() => {
     if (Platform.OS === 'android' && insets.bottom > 0) {
       const offset = insets.bottom / SCREEN_HEIGHT;
@@ -221,6 +233,7 @@ export function BottomSheet({
     }
   }, []);
 
+  // Effect to handle opening and closing the bottom sheet
   useEffect(() => {
     if (isVisible) {
       setModalVisible(true);
@@ -238,6 +251,7 @@ export function BottomSheet({
     }
   }, [defaultHeight, hideModalIfStillClosed, isVisible]);
 
+  // Function to animate the sheet to a specific destination
   const scrollTo = (destination: number) => {
     'worklet';
     translateY.value = withSpring(destination, { damping: 50, stiffness: 400 });
@@ -257,6 +271,7 @@ export function BottomSheet({
 
   const findClosestSnapPoint = (currentY: number) => {
     'worklet';
+    // Adjust the currentY by the keyboard height to find the original snap point
     const adjustedY = currentY + keyboardHeightSV.value;
 
     let closest = snapPointsHeights[0];
@@ -304,6 +319,12 @@ export function BottomSheet({
     return findClosestSnapPoint(currentY);
   };
 
+  const handlePress = () => {
+    const nextIndex = (currentSnapIndex.value + 1) % snapPointsHeights.length;
+    currentSnapIndex.value = nextIndex;
+    const destination = snapPointsHeights[nextIndex] - keyboardHeightSV.value;
+    scrollTo(destination);
+  };
 
   const animateClose = () => {
     'worklet';
@@ -335,6 +356,7 @@ export function BottomSheet({
       }
 
       const closestSnapPoint = findDirectionalSnapPoint(currentY, velocity);
+      // Calculate the final destination, accounting for the keyboard height
       const finalDestination = closestSnapPoint - keyboardHeightSV.value;
       scrollTo(finalDestination);
     });
@@ -378,6 +400,7 @@ export function BottomSheet({
               rBottomSheetStyle={rBottomSheetStyle}
               cardColor={sheetBackgroundColor ?? backgroundColor}
               mutedColor={handleColor ?? mutedColor}
+              onHandlePress={() => runOnJS(handlePress)()}
               scrollEnabled={scrollEnabled}
               handleWidth={handleWidth}
               handleHeight={handleHeight}
@@ -398,6 +421,7 @@ export function BottomSheet({
                 rBottomSheetStyle={rBottomSheetStyle}
                 cardColor={sheetBackgroundColor ?? backgroundColor}
                 mutedColor={handleColor ?? mutedColor}
+                onHandlePress={() => runOnJS(handlePress)()}
                 scrollEnabled={scrollEnabled}
                 handleWidth={handleWidth}
                 handleHeight={handleHeight}
@@ -417,6 +441,7 @@ export function BottomSheet({
   );
 }
 
+// Hook for managing bottom sheet state
 export function useBottomSheet() {
   const [isVisible, setIsVisible] = React.useState(false);
 

@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "rewriteRelativeImportExtensions": true,
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "resolvePackageJsonExports": true,

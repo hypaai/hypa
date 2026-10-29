@@ -30,3 +30,25 @@ export const shareAudioFromUri = async (uri: string, mimeType: string): Promise<
   await sharing.shareAsync(uri, { mimeType, UTI: uti, dialogTitle: DIALOG_TITLE });
   return true;
 };
+
+export const ASK_SHARE_AUDIO_KEY = 'askShareAudio';
+
+export const askAudioToFile = async (
+  audio: string,
+  apiUrl: string,
+  token: string
+): Promise<string | null> => {
+  const { File, Paths } = await import('expo-file-system');
+  const file = new File(Paths.cache, `ask-hypa-${Date.now()}.wav`);
+  if (audio.startsWith('data:')) {
+    const base64 = audio.slice(audio.indexOf(',') + 1);
+    if (!base64) return null;
+    file.write(base64, { encoding: 'base64' });
+    return file.uri;
+  }
+  const url = /^https?:/.test(audio) ? audio : `${apiUrl.replace(/\/+$/, '')}${audio}`;
+  const downloaded = await File.downloadFileAsync(url, file, {
+    headers: token.trim() ? { Authorization: `Bearer ${token.trim()}` } : {},
+  });
+  return downloaded.uri;
+};

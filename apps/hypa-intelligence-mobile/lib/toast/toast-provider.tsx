@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Toast, { ToastType } from "./toast";
 
-interface ToastItem {
+export interface ToastItem {
   id: string;
   type: ToastType;
   title: string;

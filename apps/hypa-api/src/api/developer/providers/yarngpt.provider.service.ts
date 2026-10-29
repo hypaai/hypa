@@ -9,7 +9,6 @@ import {
 import { isAxiosError } from 'axios';
 import { YarnGptAiService } from 'src/ai/yarngpt.ai.service';
 import { YarnGptOperationService } from './yarngpt-operation.service';
-import { recordUsageInContext } from 'src/libs/analytics/request-context';
 import {
   charge_type,
   developer_request_type,
@@ -118,14 +117,6 @@ export class YarnGptDeveloperService {
         throw new GatewayTimeoutException('YarnGPT timed out');
       throw new BadGatewayException('YarnGPT speech generation failed');
     }
-    recordUsageInContext({
-      body: params.body,
-      type: developer_request_type.text_to_speech,
-      usage,
-      chargeType: charge_type.character_count,
-      characterCount,
-      actualCost: cost,
-    });
     return {
       response: audio,
       usage,
