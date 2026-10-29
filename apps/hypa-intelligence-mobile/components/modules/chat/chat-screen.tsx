@@ -632,7 +632,7 @@ export function ChatScreen({
                     fontFamily: FONTS.main.medium,
                   }}
                 >
-                  Reconnect · no new charge
+                  Reconnect
                 </Text>
               </Pressable>
             )}
