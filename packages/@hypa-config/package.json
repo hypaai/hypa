@@ -5,12 +5,12 @@
   "type": "module",
   "license": "MIT",
   "exports": {
-    "./analytics": "./analytics.ts",
-    "./analytics-client": "./analytics-client.ts",
-    "./analytics-native": "./analytics-native.ts",
+    "./agent": "./agent.ts",
     "./auto-routing": "./auto-routing.ts",
+    "./chat-attachments": "./chat-attachments.ts",
     "./google-models": "./google-models.ts",
     "./her": "./her.ts",
+    "./json/chat-privacy": "./json/chat-privacy.json",
     "./json/error-codes": "./json/error-codes.json",
     "./json/voices": "./json/voices.json",
     "./language-metadata": "./language-metadata.ts",
@@ -22,6 +22,8 @@
     "./prompts": "./prompts.ts",
     "./ranking": "./ranking.ts",
     "./referral": "./referral.ts",
-    "./settings-resolvers": "./settings-resolvers.ts"
+    "./request-policy": "./request-policy.ts",
+    "./settings-resolvers": "./settings-resolvers.ts",
+    "./json/chat-privacy.json": "./json/chat-privacy.json"
   }
 }

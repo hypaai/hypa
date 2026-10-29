@@ -43,7 +43,6 @@ import {
 } from '@hypa/config/models';
 import { resolveProviderForModelFromProviderMap } from '@hypa/config/settings-resolvers';
 import type { AutoSummary } from '@hypa/config/auto-routing';
-import { Feature } from 'src/libs/analytics/feature.decorator';
 import { AutoRouterService } from './auto-router/auto-router.service';
 
 const MAX_THINKING_RETRIES = 2;
@@ -121,7 +120,6 @@ export class TranslateController {
   }
 
   @Post('mt')
-  @Feature('translate_text', 'mt')
   @Sse()
   async translateText(
     @Body() body: DeveloperMtDto,
@@ -559,7 +557,6 @@ export class TranslateController {
   }
 
   @Post('mt/thinking')
-  @Feature('translate_text', 'mt')
   async generateTranslationThinking(
     @Body() body: DeveloperMtThinkingDto,
     @Req() req: Request,
@@ -601,7 +598,6 @@ export class TranslateController {
   }
 
   @Post('tts')
-  @Feature('synthesize', 'tts')
   async generateTts(@Body() body: DeveloperTtsDto, @Req() req: Request) {
     const caller = await this.resolveProductCaller(req);
     this.logRequest('tts', req, body);
@@ -671,7 +667,6 @@ export class TranslateController {
   }
 
   @Post('stt')
-  @Feature('transcribe', 'asr')
   async speechToText(
     @Body() body: DeveloperSpeechToTextDto,
     @Req() req: Request,

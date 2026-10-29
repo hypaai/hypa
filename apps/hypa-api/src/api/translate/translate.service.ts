@@ -52,11 +52,6 @@ import {
   isGpt6AstraModel,
 } from 'src/ai/openai.model';
 import { sanitizeForLog } from '../../utils/log-utils';
-import {
-  getRequestContext,
-  recordUsageInContext,
-  updateRequestContext,
-} from 'src/libs/analytics/request-context';
 
 type MtModelData = NonNullable<
   ReturnType<DeveloperSharedService['getModelInfo']>
@@ -383,17 +378,6 @@ export class TranslateService {
   }
 
   private async recordProductRequest(params: RecordProductRequestParams) {
-    const previousCost = getRequestContext()?.costUsd ?? 0;
-    recordUsageInContext({
-      type: params.type,
-      body: params.body,
-      usage: params.usage,
-      chargeType: params.chargeType,
-      audioDurationSeconds: params.audioDurationSeconds,
-      characterCount: params.characterCount,
-      actualCost: params.actualCost,
-    });
-    updateRequestContext({ costUsd: previousCost + params.actualCost });
     if (!this.canRecordDevRequest(params)) {
       return;
     }

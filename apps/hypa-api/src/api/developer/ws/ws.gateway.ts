@@ -8,9 +8,6 @@ import { IncomingMessage } from 'http';
 import { Subscription } from 'rxjs';
 import { Server } from 'ws';
 
-import { ANALYTICS } from '@hypa/config/analytics';
-import { AnalyticsService } from 'src/libs/analytics/analytics.service';
-import { webSocketSessionProperties } from 'src/libs/analytics/usage-event';
 import { ClientSession, PodData, PodService } from './pod.service';
 
 @WebSocketGateway()
@@ -33,7 +30,6 @@ export class WSGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   constructor(
     private podService: PodService,
-    private analytics: AnalyticsService,
   ) {}
 
   handleConnection(client: any, req: IncomingMessage) {
@@ -93,17 +89,6 @@ export class WSGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.podService.releaseClient(entry.pod);
       }
       this.sessions.delete(client);
-      void this.analytics.capture({
-        event: ANALYTICS.events.completed,
-        distinctId: entry.userId,
-        userId: entry.userId,
-        properties: webSocketSessionProperties({
-          viaLabs: entry.viaLabs,
-          apiKeyId: entry.apiKeyId,
-          startedAt: entry.startedAt,
-          endedAt: Date.now(),
-        }),
-      });
     }
     console.log(
       `Client disconnected: ${client._socket?.remoteAddress ?? 'unknown'}`,

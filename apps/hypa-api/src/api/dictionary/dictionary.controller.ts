@@ -51,7 +51,6 @@ import { isAxiosError } from 'axios';
 import errorCodes from '@hypa/config/json/error-codes';
 import { ChatMessage, ChatSyncResult } from 'src/ai/ai.types';
 import { buildDictionaryPrompt } from 'src/ai/prompts/dictionary.prompts';
-import { Feature } from 'src/libs/analytics/feature.decorator';
 import { parseTranslation } from '@hypa/translate-core/thinking';
 import { abortOnDisconnect } from 'src/utils/request-abort';
 
@@ -396,7 +395,6 @@ export class DictionaryController {
   }
 
   @Post()
-  @Feature('dictionary_lookup', 'lookup')
   async search(
     @Body() body: DictionarySearchDto,
     @User() user: UserType | undefined,
@@ -527,7 +525,6 @@ export class DictionaryController {
   }
 
   @Post('tts')
-  @Feature('synthesize', 'tts')
   async tts(@Body() body: DictionaryTTSRequestDto) {
     const word = body.text.trim();
     const voice = body.voice?.trim() || 'Eniola';
@@ -545,7 +542,6 @@ export class DictionaryController {
   }
 
   @Post('translate')
-  @Feature('translate_text', 'mt')
   async translate(@Body() body: DictionaryTranslateDto) {
     const model = models.MT.hypaai.find((m) => m.default == true);
 

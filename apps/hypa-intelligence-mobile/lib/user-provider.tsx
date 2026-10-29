@@ -4,7 +4,6 @@ import Body from '@/components/shared/body';
 import { useKeyboardSettings } from '@/hooks/use-keyboard-settings';
 import { queryClient } from '@/lib/query-client';
 import { useQuery } from '@tanstack/react-query';
-import { analytics } from '@/lib/analytics';
 import { router, usePathname } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import { useHypaKeyboardStatus } from './use-hypa-keyboard-status';
@@ -55,7 +54,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     user: userData ?? null,
   };
 
-  useEffect(() => analytics.syncUser(userData?.id), [userData?.id]);
 
   useEffect(() => {
     if (userQ.isLoading) return;
@@ -67,7 +65,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     if (userQ.isSuccess && userData) {
       hasResolvedOnce.current = true;
-      router.navigate('/home');
+      router.navigate('/chat');
       return;
     }
   }, [userQ.isLoading, userQ.isError, userQ.isSuccess, userData]);

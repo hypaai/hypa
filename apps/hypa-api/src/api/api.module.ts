@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { FeatureInterceptor } from 'src/libs/analytics/feature.interceptor';
+import { APP_GUARD } from '@nestjs/core';
 import { AudioModule } from './audio/audio.module';
 import { AuthModule } from './auth/auth.module';
 import { DeveloperModule } from './developer/developer.module';
@@ -11,6 +10,8 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { DictionaryModule } from './dictionary/dictionary.module';
 import { TranslateModule } from './translate/translate.module';
 import { AiModule } from 'src/ai/ai.module';
+import { AgentModule } from './agent/agent.module';
+import { ConversationsModule } from './conversations/conversations.module';
 
 @Module({
   imports: [
@@ -23,15 +24,13 @@ import { AiModule } from 'src/ai/ai.module';
     BookmarkModule,
     DeveloperModule,
     WebhooksModule,
+    AgentModule,
+    ConversationsModule,
   ],
   providers: [
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: FeatureInterceptor,
     },
   ],
   controllers: [],
