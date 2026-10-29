@@ -61,5 +61,13 @@ target 'HypaIntelligence' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
+
+    # ExpoModulesJSI's podspec sets no C++ standard, so it falls back to gnu++14 and jsi.h fails to compile.
+    installer.pods_project.targets.each do |target|
+      next unless target.name == 'ExpoModulesJSI'
+      target.build_configurations.each do |config|
+        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'
+      end
+    end
   end
 end
