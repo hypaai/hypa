@@ -1,3 +1,6 @@
+import { textOutputTokens, MODEL_REQUEST_TIMEOUT_MS, SPEECH_TOOL_TIMEOUT_MS } from '@hypa/config/request-policy';
+import { randomUUID } from 'crypto';
+import type { LoopMessage, ModelStep } from '../api/agent/agent.loop';
 import { Injectable, Logger } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import { Readable } from 'stream';
@@ -31,7 +34,7 @@ interface GoogleResponse {
   [key: string]: unknown;
 }
 
-function formatGoogleContent(
+export function formatGoogleContent(
   content: string,
   reasoning: string,
   includeThinking: boolean,
@@ -145,6 +148,7 @@ export async function* parseGoogleSseStream(
     };
   };
 
+  // eslint-disable-next-line @typescript-eslint/await-thenable
   for await (const chunk of stream as AsyncIterable<Buffer>) {
     buffer += chunk.toString();
     const lines = buffer.split(/\r?\n/);
@@ -209,7 +213,7 @@ export class GoogleAiService {
       temperature: options.temperature ?? 1,
       top_p: options.top_p ?? 0.95,
       top_k: options.top_k ?? 64,
-      max_tokens: options.max_tokens ?? 1000,
+      max_tokens: textOutputTokens(options.max_tokens),
       ...(thinking && { reasoning_effort: 'low' }),
     };
   }
@@ -243,6 +247,23 @@ export class GoogleAiService {
     );
   }
 
+  async chatSyncRaw(
+    messages: Array<{ role: string; content: unknown }>,
+    model: string,
+    url: string,
+    options: GoogleChatOptions = {},
+  ): Promise<ChatSyncResult & { finishReason: string | null; raw: unknown }> {
+    const placeholder = messages.map((message) => ({
+      role: message.role as ChatMessage['role'],
+      content: typeof message.content === 'string' ? message.content : '',
+    }));
+    return this.postSync(
+      url,
+      { ...this.getRequestBody(placeholder, model, false, options), messages },
+      options,
+    );
+  }
+
   private async postSync(
     url: string,
     body: unknown,
@@ -272,26 +293,26 @@ export class GoogleAiService {
   }
 }
 
-interface VertexChatOptions {
+export interface VertexChatOptions {
   max_tokens?: number;
   thinking?: boolean;
   signal?: AbortSignal;
 }
 
-interface VertexAudioOptions {
+export interface VertexAudioOptions {
   max_tokens?: number;
   system_instruction?: string;
   signal?: AbortSignal;
 }
 
-interface VertexSpeechToTextResult {
+export interface VertexSpeechToTextResult {
   text: string;
   usage: AiUsage;
   finishReason: string | null;
   raw: unknown;
 }
 
-interface VertexTextToSpeechResult {
+export interface VertexTextToSpeechResult {
   audio_b64: string;
   audio_type: 'audio/wav';
   sample_rate: number;
@@ -309,11 +330,11 @@ const VERTEX_38_TTS_MODELS = new Set([
   'gemini-3.8-flash-lite-tts',
 ]);
 
-function isVertex38TtsModel(model: string): boolean {
+export function isVertex38TtsModel(model: string): boolean {
   return VERTEX_38_TTS_MODELS.has(model);
 }
 
-function getVertexTranscriptionPrompt(): string {
+export function getVertexTranscriptionPrompt(): string {
   const prompt = getProviderPrompt('ASR', 'google')?.system;
   if (!prompt) {
     throw new Error(
@@ -342,6 +363,7 @@ interface VertexPart {
   text?: string | null;
   thought?: boolean;
   thoughtSignature?: string;
+  functionCall?: { name?: string; args?: Record<string, unknown> };
   inlineData?: {
     data?: string;
     mimeType?: string;
@@ -383,9 +405,6 @@ interface VertexCountTokensResponse {
   [key: string]: unknown;
 }
 
-const VERTEX_DEFAULT_MAX_OUTPUT_TOKENS = 1000;
-const VERTEX_MAX_OUTPUT_TOKENS = 65536;
-
 function numberOrZero(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
@@ -399,7 +418,7 @@ function hasUsageMetadata(usage: VertexUsageMetadata): boolean {
   ].some((value) => typeof value === 'number' && Number.isFinite(value));
 }
 
-function normalizeVertexUsage(
+export function normalizeVertexUsage(
   usage?: VertexUsageMetadata | null,
   speechMode?: 'tts' | 'transcribe',
 ): AiUsage | undefined {
@@ -477,7 +496,7 @@ function normalizeVertexUsage(
   };
 }
 
-function formatVertexContent(
+export function formatVertexContent(
   content: string,
   reasoning: string,
   includeThinking: boolean,
@@ -492,7 +511,7 @@ function formatVertexContent(
   }`;
 }
 
-function stripVertexThinkingFromHistory(
+export function stripVertexThinkingFromHistory(
   messages: ChatMessage[],
 ): ChatMessage[] {
   return messages.map((message) => {
@@ -508,14 +527,10 @@ function stripVertexThinkingFromHistory(
 }
 
 function getMaxOutputTokens(value?: number): number {
-  if (value === undefined || !Number.isFinite(value)) {
-    return VERTEX_DEFAULT_MAX_OUTPUT_TOKENS;
-  }
-
-  return Math.min(VERTEX_MAX_OUTPUT_TOKENS, Math.max(1, Math.floor(value)));
+  return textOutputTokens(value);
 }
 
-function buildVertexRequestBody(
+export function buildVertexRequestBody(
   messages: ChatMessage[],
   options: VertexChatOptions = {},
 ) {
@@ -549,7 +564,7 @@ function buildVertexRequestBody(
   };
 }
 
-function buildVertexAudioContents(
+export function buildVertexAudioContents(
   audioBase64: string,
   mimeType: string,
   instruction: string = getVertexTranscriptionPrompt(),
@@ -573,7 +588,7 @@ function buildVertexAudioContents(
   ];
 }
 
-function buildVertexAudioRequestBody(
+export function buildVertexAudioRequestBody(
   audioBase64: string,
   mimeType: string,
   options: VertexAudioOptions = {},
@@ -594,7 +609,7 @@ function buildVertexAudioRequestBody(
   };
 }
 
-function buildVertexAudioCountTokensBody(
+export function buildVertexAudioCountTokensBody(
   audioBase64: string,
   mimeType: string,
   instruction: string = getVertexTranscriptionPrompt(),
@@ -604,7 +619,7 @@ function buildVertexAudioCountTokensBody(
   };
 }
 
-function buildVertexTranscribeRequestBody(
+export function buildVertexTranscribeRequestBody(
   audioBase64: string,
   mimeType: string,
 ) {
@@ -613,7 +628,7 @@ function buildVertexTranscribeRequestBody(
   };
 }
 
-function buildVertexTtsRequestBody(
+export function buildVertexTtsRequestBody(
   text: string,
   languageCode: string,
   voice: string,
@@ -672,7 +687,7 @@ function parsePcmMimeType(mimeType: string) {
   return { sampleRate, channels };
 }
 
-function decodeVertexTtsAudio(
+export function decodeVertexTtsAudio(
   audioBase64: string,
   mimeType: string,
 ): { audio_b64: string; sample_rate: number } {
@@ -700,7 +715,7 @@ function decodeVertexTtsAudio(
   return wrapVertexPcmAsWav(audioBase64, mimeType);
 }
 
-function wrapVertexPcmAsWav(
+export function wrapVertexPcmAsWav(
   audioBase64: string,
   mimeType: string,
 ): { audio_b64: string; sample_rate: number } {
@@ -750,7 +765,7 @@ function sanitizeVertexValue(value: unknown): unknown {
   return value;
 }
 
-async function* parseVertexSseStream(
+export async function* parseVertexSseStream(
   stream: Readable,
   includeThinking: boolean,
 ): AsyncGenerator<StreamChunk> {
@@ -819,6 +834,7 @@ async function* parseVertexSseStream(
     };
   };
 
+  // eslint-disable-next-line @typescript-eslint/await-thenable
   for await (const chunk of stream as AsyncIterable<Buffer>) {
     buffer += chunk.toString();
     const lines = buffer.split(/\r?\n/);
@@ -859,6 +875,38 @@ async function* parseVertexSseStream(
     usage,
     finishReason,
   };
+}
+
+async function readVertexToolStream(stream: Readable, onTextDelta: (text: string) => void): Promise<VertexResponse> {
+  let buffer = '';
+  const parts: VertexPart[] = [];
+  let usageMetadata: VertexUsageMetadata | undefined;
+  let finishReason: string | null | undefined;
+  const readLine = (line: string) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith(':') || trimmed.startsWith('event:')) return;
+    const body = trimmed.startsWith('data:') ? trimmed.slice(5).trim() : trimmed;
+    if (!body || body === '[DONE]') return;
+    const chunk = JSON.parse(body) as VertexResponse & { error?: { message?: string } };
+    if (chunk.error) throw new Error(chunk.error.message || 'Gemini stream failed');
+    const candidate = chunk.candidates?.[0];
+    for (const part of candidate?.content?.parts ?? []) {
+      parts.push(part);
+      if (!part.thought && typeof part.text === 'string' && part.text) onTextDelta(part.text);
+    }
+    usageMetadata = chunk.usageMetadata ?? usageMetadata;
+    finishReason = candidate?.finishReason ?? finishReason;
+  };
+  stream.setEncoding('utf8');
+  // eslint-disable-next-line @typescript-eslint/await-thenable -- Node streams implement AsyncIterable.
+  for await (const chunk of stream as AsyncIterable<string>) {
+    buffer += chunk;
+    const lines = buffer.split(/\r?\n/);
+    buffer = lines.pop() ?? '';
+    for (const line of lines) readLine(line);
+  }
+  if (buffer.trim()) readLine(buffer);
+  return { candidates: [{ content: { role: 'model', parts }, finishReason }], usageMetadata };
 }
 
 @Injectable()
@@ -1013,6 +1061,7 @@ export class GoogleVertexAiService {
       buildVertexAudioRequestBody(audioBase64, mimeType, options),
       {
         signal: options.signal,
+        timeout: SPEECH_TOOL_TIMEOUT_MS,
         headers: this.getRequestHeaders(),
       },
     );
@@ -1032,6 +1081,7 @@ export class GoogleVertexAiService {
       buildVertexTranscribeRequestBody(audioBase64, mimeType),
       {
         signal,
+        timeout: SPEECH_TOOL_TIMEOUT_MS,
         headers: this.getRequestHeaders(),
       },
     );
@@ -1052,6 +1102,7 @@ export class GoogleVertexAiService {
       buildVertexTtsRequestBody(text, languageCode, voice, model),
       {
         signal,
+        timeout: SPEECH_TOOL_TIMEOUT_MS,
         headers: this.getRequestHeaders(),
       },
     );
@@ -1139,6 +1190,113 @@ export class GoogleVertexAiService {
       usage,
       finishReason: response.data?.candidates?.[0]?.finishReason ?? null,
       raw: sanitizeVertexValue(response.data),
+    };
+  }
+
+  async chatWithTools(
+    messages: LoopMessage[],
+    model: string,
+    baseApiUrl: string,
+    tools: Array<{ function: { name: string; description: string; parameters: unknown } }>,
+    signal?: AbortSignal,
+    options?: VertexChatOptions & { temperature?: number; top_p?: number; top_k?: number },
+    onTextDelta?: (text: string) => void,
+  ): Promise<ModelStep> {
+    if (!baseApiUrl.includes('aiplatform.googleapis.com')) {
+      throw new Error('Refusing to send the Gemini key to another host');
+    }
+    const system = messages.filter((message) => message.role === 'system');
+    const contents: VertexContent[] = [];
+    for (const message of messages.filter((item) => item.role !== 'system')) {
+      if (message.providerReply?.protocol === 'vertex') {
+        contents.push(message.providerReply.content);
+      } else if (message.role === 'tool') {
+        let result: unknown;
+        try { result = JSON.parse(message.content); }
+        catch { result = { result: message.content }; }
+        const part: VertexPart = { functionResponse: {
+          name: message.name,
+          response: result && typeof result === 'object' && !Array.isArray(result)
+            ? result : { result },
+        } };
+        const previous = contents.at(-1);
+        if (previous?.role === 'user' && previous.parts?.every((item) => item.functionResponse)) {
+          previous.parts.push(part);
+        } else {
+          contents.push({ role: 'user', parts: [part] });
+        }
+      } else {
+        if (message.tool_calls?.length) throw new Error('Missing signed Gemini tool context');
+        const parts: VertexPart[] = [{ text: message.content }];
+        for (const image of message.images ?? []) {
+          const match = /^data:([^;]+);base64,(.+)$/.exec(image);
+          if (match) parts.push({ inlineData: { mimeType: match[1], data: match[2] } });
+        }
+        contents.push({ role: message.role === 'assistant' ? 'model' : 'user', parts });
+      }
+    }
+    const response = await this.api.post<VertexResponse | Readable>(
+      this.getVersionedEndpoint(baseApiUrl, model, Boolean(onTextDelta)),
+      {
+        ...(system.length > 0 && {
+          systemInstruction: {
+            parts: system.map((message) => ({ text: message.content })),
+          },
+        }),
+        contents,
+        ...(tools.length ? { tools: [
+          {
+            functionDeclarations: tools.map((tool) => ({
+              name: tool.function.name,
+              description: tool.function.description,
+              parameters: tool.function.parameters,
+            })),
+          },
+        ] } : {}),
+        generationConfig: {
+          maxOutputTokens: textOutputTokens(options?.max_tokens),
+          ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
+          ...(options?.top_p !== undefined ? { topP: options.top_p } : {}),
+          ...(options?.top_k !== undefined ? { topK: options.top_k } : {}),
+          ...(options?.thinking !== undefined ? { thinkingConfig: {
+            thinkingLevel: options.thinking ? 'MEDIUM' : 'LOW',
+            includeThoughts: options.thinking,
+          } } : {}),
+        },
+      },
+      { signal, timeout: MODEL_REQUEST_TIMEOUT_MS, headers: this.getRequestHeaders(), ...(onTextDelta ? { responseType: 'stream' } : {}) },
+    );
+    const data = onTextDelta
+      ? await readVertexToolStream(response.data as Readable, onTextDelta)
+      : response.data as VertexResponse;
+    const parts = data?.candidates?.[0]?.content?.parts ?? [];
+    const usage = normalizeVertexUsage(data?.usageMetadata);
+    if (!usage) throw new Error('Gemini response usage unavailable');
+    const toolCalls = parts.flatMap((part) => {
+      const call = part.functionCall;
+      if (!call?.name) return [];
+      return [
+        {
+          id: `call_${randomUUID()}`,
+          name: call.name,
+          arguments: JSON.stringify(call.args ?? {}),
+        },
+      ];
+    });
+    const text = parts
+      .filter((part) => !part.thought && !part.functionCall)
+      .map((part) => (typeof part.text === 'string' ? part.text : ''))
+      .join('');
+    const candidate = data?.candidates?.[0];
+    const finishReason = candidate?.finishReason;
+    return {
+      text, toolCalls, usage,
+      providerReply: { protocol: 'vertex', content: candidate?.content ?? { role: 'model', parts: [] } },
+      ...(finishReason !== 'STOP' ? {
+        incompleteReason: finishReason === 'MAX_TOKENS'
+          ? 'The model reached the output limit. Increase the output length and try again.'
+          : `Gemini could not complete this reply (${finishReason ?? 'no candidate'}).`,
+      } : {}),
     };
   }
 }

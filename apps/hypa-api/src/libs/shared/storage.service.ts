@@ -145,6 +145,17 @@ export class StorageService implements OnModuleInit {
     };
   }
 
+  async remove(
+    id: string,
+    options: {
+      folder: string;
+      ext: string;
+    },
+  ): Promise<void> {
+    const objectPath = this.getObjectPath(id, options.folder, options.ext);
+    await this.getBucket().file(objectPath).delete();
+  }
+
   readStream(
     id: string,
     options: {

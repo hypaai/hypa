@@ -34,5 +34,6 @@ export interface HypaAiTtsRawResult {
   sample_rate: number;
   input_ids_len: number;
   gen_ids_len: number;
+  /** The handler reports refusals in the body with a 200, rather than as a status. */
   error?: string;
 }

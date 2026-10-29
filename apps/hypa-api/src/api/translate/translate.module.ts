@@ -8,6 +8,7 @@ import { TranslateMtService } from './mt/translate-mt.service';
 @Module({
   imports: [DeveloperModule],
   controllers: [TranslateController],
-  providers: [TranslateService, AutoRouterService, TranslateMtService],
+  providers: [TranslateService, AutoRouterService, TranslateMtService, TranslateController],
+  exports: [TranslateController],
 })
 export class TranslateModule {}

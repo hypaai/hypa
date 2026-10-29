@@ -1,3 +1,7 @@
+import { responsesWithTools } from './responses-tools';
+import type { LoopMessage } from '../api/agent/agent.loop';
+import type { AgentModelOptions } from '../api/agent/agent.transport';
+import type { FunctionTool } from '@hypa/intelligence-core';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import axios from 'axios';
 import { Readable } from 'stream';
@@ -316,5 +320,24 @@ export class OpenAiAiService {
       text: response.data?.text || response.data?.transcript || '',
       usage,
     };
+  }
+
+  async chatWithTools(
+    messages: LoopMessage[],
+    model: string,
+    url: string,
+    tools: FunctionTool[],
+    signal?: AbortSignal,
+    options?: AgentModelOptions,
+    onTextDelta?: (text: string) => void,
+  ) {
+    if (new URL(url).origin !== 'https://api.openai.com') {
+      throw new Error('Refusing to send the provider key to another host');
+    }
+    return responsesWithTools({
+      baseURL: 'https://api.openai.com/v1',
+      apiKey: process.env.OPENAI_API_KEY,
+      messages, model, tools, signal, options, onTextDelta,
+    });
   }
 }

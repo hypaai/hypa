@@ -1,5 +1,10 @@
+import { textOutputTokens } from '@hypa/config/request-policy';
 import { Injectable } from '@nestjs/common';
-import axios, { AxiosInstance } from 'axios';
+import axios, {
+  AxiosInstance,
+  AxiosRequestConfig,
+  isAxiosError,
+} from 'axios';
 import { Readable } from 'stream';
 import { AiUsage, ChatSyncResult, StreamChunk } from './ai.types';
 import {
@@ -7,7 +12,14 @@ import {
   stripGoogleThinkingFromHistory,
   type GoogleChatOptions,
 } from './google.ai.service';
-interface MetaChatMessage {
+import { convertAudioToPcmWav } from './pcm-wav';
+import { responsesWithTools } from './responses-tools';
+import type { LoopMessage } from '../api/agent/agent.loop';
+import type { AgentModelOptions } from '../api/agent/agent.transport';
+import type { FunctionTool } from '@hypa/intelligence-core';
+import { Debug } from 'src/utils/debug';
+
+export interface MetaChatMessage {
   role: string;
   content: string | Array<Record<string, unknown>>;
   tool_calls?: unknown;
@@ -19,7 +31,7 @@ interface MetaAsrResponse {
   audioDurationMs?: number;
 }
 
-function metaChatBody(
+export function metaChatBody(
   messages: MetaChatMessage[],
   model: string,
   options: GoogleChatOptions,
@@ -46,9 +58,18 @@ function metaChatBody(
     messages: history,
     stream: true,
     stream_options: { include_usage: true },
-    max_completion_tokens: options.max_tokens ?? 1000,
+    max_completion_tokens: textOutputTokens(options.max_tokens),
+    reasoning_effort: 'low',
     ...sampling,
   };
+}
+
+const clip = (text: string) => text.slice(0, 300);
+
+async function errorBody(data: unknown): Promise<string> {
+  if (!(data instanceof Readable)) return clip(typeof data === 'string' ? data : (JSON.stringify(data) ?? ''));
+  const chunks = (await data.toArray()) as Buffer[];
+  return clip(Buffer.concat(chunks).toString());
 }
 
 @Injectable()
@@ -57,6 +78,29 @@ export class MetaAiService {
     timeout: 120_000,
     headers: { 'Content-Type': 'application/json' },
   });
+
+  private async post(
+    url: string,
+    body: { model: string; stream: boolean; [key: string]: unknown },
+    config: AxiosRequestConfig,
+  ) {
+    try {
+      return await this.api.post(url, body, config);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        Debug.error({
+          message: 'Meta request failed',
+          url,
+          model: body.model,
+          stream: body.stream,
+          status: error.response?.status,
+          code: error.code,
+          response: await errorBody(error.response?.data),
+        });
+      }
+      throw error;
+    }
+  }
 
   private authHeader() {
     const key = process.env.META_MODEL_API_KEY;
@@ -70,7 +114,7 @@ export class MetaAiService {
     url: string,
     options: GoogleChatOptions = {},
   ): Promise<AsyncGenerator<StreamChunk>> {
-    const response = await this.api.post(
+    const response = await this.post(
       url,
       metaChatBody(messages, model, options),
       {
@@ -91,17 +135,62 @@ export class MetaAiService {
     url: string,
     options: GoogleChatOptions = {},
   ): Promise<ChatSyncResult & { finishReason: string | null }> {
-    const stream = await this.chatStream(messages, model, url, options);
-    let content = '';
-    let usage: AiUsage | undefined;
-    let finishReason: string | null = null;
-    for await (const chunk of stream) {
-      content = chunk.fullContent;
-      usage = chunk.usage ?? usage;
-      finishReason = chunk.finishReason ?? finishReason;
+    const body = metaChatBody(messages, model, options);
+    const request: Record<string, unknown> = { ...body, stream: false };
+    delete request.stream_options;
+    let response;
+    try {
+      response = await this.api.post<{
+        choices?: Array<{ message?: { content?: string | null }; finish_reason?: string | null }>;
+        usage?: AiUsage;
+      }>(url, request, {
+        signal: options.signal,
+        headers: this.authHeader(),
+      });
+    } catch (error) {
+      if (isAxiosError(error) && ['ETIMEDOUT', 'ECONNABORTED'].includes(error.code ?? '')) {
+        throw Object.assign(new Error('Meta request timed out.'), { code: 'request_timeout' });
+      }
+      throw error;
     }
-    if (!usage) throw new Error('Meta response usage unavailable');
+    const choice = response.data.choices?.[0];
+    const finishReason = choice?.finish_reason ?? null;
+    if (finishReason === 'length') {
+      throw Object.assign(new Error('Meta reached its output-token limit before completing the response.'), { code: 'incomplete_response' });
+    }
+    const usage = response.data.usage;
+    if (!usage) {
+      throw Object.assign(new Error('Meta returned no token usage; the response could not be accounted for.'), { code: 'missing_usage' });
+    }
+    const content = choice?.message?.content?.trim() ?? '';
+    if (!content) throw Object.assign(new Error('Meta returned an empty response.'), { code: 'empty_response' });
     return { content, usage, finishReason };
+  }
+
+  async chatWithTools(
+    messages: LoopMessage[],
+    model: string,
+    url: string,
+    tools: FunctionTool[],
+    signal?: AbortSignal,
+    options?: AgentModelOptions,
+    onTextDelta?: (text: string) => void,
+  ) {
+    if (new URL(url).origin !== 'https://api.meta.ai') {
+      throw new Error('Refusing to send the provider key to another host');
+    }
+    return responsesWithTools({
+      baseURL: 'https://api.meta.ai/v1',
+      apiKey: process.env.META_MODEL_API_KEY,
+      messages, model, tools, signal, options, onTextDelta,
+    });
+  }
+
+  async transcribe(
+    audio: Buffer,
+  ): Promise<{ transcript: string; audioDurationMs: number }> {
+    const wav = await convertAudioToPcmWav(audio);
+    return this.transcribeWav(wav);
   }
 
   async transcribeWav(
@@ -129,6 +218,11 @@ export class MetaAiService {
       signal,
     });
     if (!response.ok) {
+      Debug.error({
+        message: 'Meta transcription failed',
+        status: response.status,
+        response: clip(await response.text()),
+      });
       throw new Error(`Meta transcription failed (${response.status})`);
     }
     const body = (await response.json()) as MetaAsrResponse;

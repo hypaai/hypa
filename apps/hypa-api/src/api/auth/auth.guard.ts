@@ -51,6 +51,7 @@ export class AuthGuard implements CanActivate {
         secret: process.env.JWT_SECRET,
       });
     } catch {
+      // A genuinely invalid/expired token — the only case that should 401.
       throw new UnauthorizedException({ message: 'Unauthorized' });
     }
 
@@ -92,11 +93,21 @@ export class AuthGuard implements CanActivate {
     });
 
     if (!user) {
+      // console.log('[AuthGuard] token user not found in database', {
+      //   path: request.url,
+      //   userId,
+      // });
       return undefined;
     }
 
     request['user'] = user;
     request['userId'] = user.id;
+
+    // console.log('[AuthGuard] attached user to request', {
+    //   path: request.url,
+    //   userId: user.id,
+    //   email: user.email,
+    // });
 
     return user;
   }
@@ -105,6 +116,7 @@ export class AuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<Request>();
     const pathOnly = request.url?.split('?')[0] ?? request.url;
 
+    // Allow OPTIONS requests (CORS preflight) to pass through
     if (request.method === 'OPTIONS') {
       return true;
     }
@@ -115,27 +127,48 @@ export class AuthGuard implements CanActivate {
       return true;
     }
 
+    // Special case: Allow POST /conversations and POST /dictionary for both authenticated and anonymous users
+    // This is intentional to support temporary chats/searches for unauthenticated users
+    // SECURITY NOTE: Rate limiting should be applied at the controller level
     const isAnonymousAllowed =
       request.method === 'POST' &&
-      (pathOnly === '/dictionary' ||
+      (pathOnly === '/conversations' ||
+        pathOnly.startsWith('/conversations/') ||
+        pathOnly === '/dictionary' ||
+        pathOnly === '/v2/dictionary' ||
         pathOnly === '/dictionary/translate' ||
+        pathOnly === '/v2/dictionary/translate' ||
         pathOnly === '/dictionary/tts' ||
+        pathOnly === '/v2/dictionary/tts' ||
         pathOnly.startsWith('/dictionary/tts/') ||
-        pathOnly.startsWith('/v2/translate/'));
+        pathOnly.startsWith('/v2/dictionary/tts/') ||
+        pathOnly.startsWith('/v2/translate/') ||
+        pathOnly === '/v2/agent') ||
+      // Anonymous agent turns can be picked up by their unguessable requestId.
+      // Media links carry their own signature and expiry.
+      (request.method === 'GET' && pathOnly.startsWith('/v2/agent/'));
 
     if (isAnonymousAllowed) {
+      // If token is provided, attempt to authenticate and attach user
       if (bearer && token) {
         try {
           await this.attachUserFromToken(request, token);
         } catch (error: any) {
+          // Invalid token - log the attempt but allow anonymous access
           console.warn(
-            '[AuthGuard] Invalid token for anonymous route:',
+            '[AuthGuard] Invalid token for /conversations:',
             error.message,
           );
         }
       } else {
+        // console.log('[AuthGuard] anonymous product request without bearer', {
+        //   method: request.method,
+        //   path: pathOnly,
+        // });
       }
 
+      // Allow request to proceed (with or without user)
+      // The controller will handle anonymous vs authenticated logic
       return true;
     }
 
@@ -145,6 +178,12 @@ export class AuthGuard implements CanActivate {
       });
     }
 
+    // No blanket catch here: attachUserFromToken already throws its own
+    // UnauthorizedException for a genuinely bad/expired token or missing
+    // user. Anything else (e.g. a transient DB error on the user lookup)
+    // propagates as its real error instead of being silently rewritten
+    // into a false-positive 401 — a raw 401 is what the frontend's axios
+    // interceptor treats as "session invalid" and logs the user out on.
     const user = await this.attachUserFromToken(request, token);
 
     if (!user) {
