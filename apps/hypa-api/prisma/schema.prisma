@@ -1,7 +1,14 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 generator client {
-  provider     = "prisma-client"
-  output       = "../src/generated/prisma"
-  moduleFormat = "cjs"
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = "js"
 }
 
 datasource db {
@@ -30,7 +37,7 @@ enum auth_provider {
 
 enum compare_type {
   AC
-  LLM
+  LLM // deprecated use ac instead
   MT
   ASR
   TTS
@@ -42,6 +49,8 @@ enum developer_request_type {
   speech_to_text
   ocr
   chat
+  dictionary
+  image_generation
 }
 
 enum developer_request_provider {
@@ -64,6 +73,7 @@ enum charge_type {
   tokens
   audio_minutes
   character_count
+  per_image
 }
 
 enum bookmark_source {
@@ -183,11 +193,14 @@ model chat {
   user     user      @relation(fields: [userId], references: [id])
   messages message[]
   archive  Boolean   @default(false)
+  // One pinned keyboard thread per user; ordinary chats leave kind null.
+  kind     String?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   userId     String
 
+  //Lab fields
   provider           String?
   model_name         String?
   output_length      Int?
@@ -196,6 +209,8 @@ model chat {
   temperature        Float?
   top_k              Float?
   top_p              Float?
+
+  @@unique([userId, kind])
 }
 
 model invoice {
@@ -239,6 +254,10 @@ model message {
 
   content_type content_type @default(markdown)
   chatId       String?
+  attachments  Json?
+  audio_key    String?
+  tool_trace   Json?
+  request_id   String?      @unique
 
   parent   message?  @relation("parent_message", fields: [parentId], references: [id])
   children message[] @relation("parent_message")
@@ -288,10 +307,14 @@ model transcription {
 
   transcription String
 
+  provider           String?
+  auto_resolution    Json?
+  source_lang        String?
   model              String?
+  max_tokens         Int?
   system_instruction String?
-  temperature        Int?
-  top_p              Int?
+  temperature        Float?
+  top_p              Float?
   top_k              Int?
 
   userId String
@@ -308,10 +331,13 @@ model Synthesis {
   file_id String
 
   voice              String
+  provider           String?
+  auto_resolution    Json?
+  language           String?
   model              String?
-  temperature        Int?
-  top_p              Int?
-  repetition_penalty Int?
+  temperature        Float?
+  top_p              Float?
+  repetition_penalty Float?
   max_new_tokens     Int?
 
   userId String
@@ -332,6 +358,7 @@ model Compare {
   model_a String
   model_b String
 
+  thinking           Boolean?
   output_length      Int?
   stop_sequence      String[]
   system_instruction String?
@@ -339,21 +366,31 @@ model Compare {
   top_p              Float?
   top_k              Float?
 
+  // Translate Fields
   source_lang String?
   target_lang String?
 
-  mimeType String?
+  provider_a String?
+  provider_b String?
+  max_tokens Int?
 
+  // ASR Fields
+  source_lang_a String?
+  source_lang_b String?
+  mimeType      String?
+
+  // TTS Fields
   language_a         String?
   voice_a            String?
   language_b         String?
   voice_b            String?
-  voice              String?
+  voice              String? // Deprecated, kept for backward compatibility
   repetition_penalty Float?
   max_new_tokens     Int?
 
-  response_a String? @db.Text
-  response_b String? @db.Text
+  // Response Fields
+  response_a      String? @db.Text
+  response_b      String? @db.Text
   auto_resolution Json?
 
   userId String
@@ -363,6 +400,11 @@ model Compare {
   updated_at DateTime @updatedAt
 }
 
+// One row per (taskType, provider, model): the org-curated Leaderboard reads
+// straight from this table. A new run for the same model overwrites its row
+// (upsert) rather than accumulating history — only trusted "curator" accounts
+// (see LEADERBOARD_CURATORS) ever write here; a regular user's Benchmark run
+// never reaches this table.
 model benchmark_result {
   id String @id @default(cuid())
 
@@ -371,14 +413,25 @@ model benchmark_result {
   model      String
   datasetKey String
 
+  // MT rows chain a separate ASR model (produces the transcript) into the
+  // translation model credited above — record which one, so a translation
+  // score can be traced back to the transcription quality feeding it.
+  // Null for ASR rows, which have no separate transcriber.
   transcriberProvider developer_request_provider?
   transcriberModel    String?
 
   metrics     Json
   sampleCount Int
 
+  // Same metrics, bucketed by language (target language for MT, spoken
+  // language for ASR). Nullable: existing rows predate this field, and the
+  // drill-down UI treats an absent row (or an absent language within it) as
+  // "not available" rather than an error.
   language_metrics Json?
 
+  // A curator can take a run off the public board without losing it. Never
+  // written by submitResult's update branch, so rerunning a hidden model
+  // lands the new scores but keeps it hidden until a curator restores it.
   hidden Boolean @default(false)
 
   ranBy   user   @relation(fields: [ranById], references: [id])
@@ -387,7 +440,36 @@ model benchmark_result {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  // Keyed by which benchmark (dataset) produced this score, not just the
+  // broad task type — two different datasets under the same taskType are not
+  // comparable and must not silently overwrite each other.
   @@unique([datasetKey, provider, model])
+}
+
+model agent_run {
+  request_id String   @id
+  user_id    String
+  input_hash String
+  status     String
+  chat_id    String?
+  message_id String?
+  result     Json?
+  error      Json?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([user_id])
+}
+
+model agent_step {
+  id         String  @id @default(cuid())
+  request_id String
+  step       Int
+  user_id    String
+  kind       String
+  cost       Decimal @default(0)
+
+  @@unique([request_id, step])
 }
 
 model developer_request {
@@ -466,6 +548,7 @@ model custom_model {
   updated_at DateTime @updatedAt
 }
 
+// RAG System - Document chunks with vector embeddings
 model document_chunk {
   id         String                       @id @default(dbgenerated("(gen_random_uuid())::text"))
   content    String                       @db.Text
@@ -485,6 +568,7 @@ enum yarn_operation_status {
   refunded
 }
 
+// YarnGPT only: the debit and this recovery record commit together.
 model yarn_tts_operation {
   id              String                @id
   status          yarn_operation_status @default(pending)
@@ -514,4 +598,10 @@ model yarn_tts_operation {
   @@index([status, deadlineAt])
   @@index([status, historyRecorded, created_at])
   @@index([userId, apiKeyId, created_at])
+}
+
+// Conservative per-POST reservations for the shared anonymous MCP allowance.
+model mcp_anonymous_budget {
+  day            String @id
+  reserved_cents Int
 }
