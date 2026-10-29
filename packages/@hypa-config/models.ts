@@ -32,6 +32,8 @@ interface ModelDefinition {
   servedModelName?: string;
   timeoutMs?: number;
   requiresSourceLanguage?: boolean;
+  tools?: boolean;
+  vision?: boolean;
 }
 
 export type ModelsByProvider = Record<string, ModelDefinition[]>;
@@ -39,7 +41,7 @@ export type CapabilityModel = ModelDefinition & { default: boolean };
 type ModelOption = CapabilityModel & { languageCodes: string[] };
 export type CapabilityMap<T> = Record<ModelCapability, Record<string, T[]>>;
 
-const MODELS = catalog.models as ModelsByProvider;
+export const MODELS = catalog.models as ModelsByProvider;
 
 function getLanguageName(code: string): string {
   const name = (languageNames as Record<string, string>)[code];
@@ -81,7 +83,7 @@ export function isContributorModel(provider: string, model: string): boolean {
   return provider === "meta" && model.endsWith("-contributor");
 }
 
-const PRODUCT_MODELS_BY_CAPABILITY = groupModelsByCapability(
+export const PRODUCT_MODELS_BY_CAPABILITY = groupModelsByCapability(
   Object.fromEntries(Object.entries(MODELS).map(([provider, models]) => [
     provider,
     models.filter((model) => !isContributorModel(provider, model.name)),
@@ -143,6 +145,20 @@ function withAutoRouter(options: CapabilityMap<ModelOption>): CapabilityMap<Mode
 
 export const MODEL_OPTIONS_BY_CAPABILITY = withAutoRouter(modelOptions(MODELS_BY_CAPABILITY));
 export const PRODUCT_MODEL_OPTIONS_BY_CAPABILITY = withAutoRouter(modelOptions(PRODUCT_MODELS_BY_CAPABILITY));
+
+export function getAssistantModels(provider?: string): CapabilityModel[] {
+  const names = provider ? [provider] : Object.keys(MODELS);
+  return names.flatMap((name) =>
+    (MODELS[name] ?? [])
+      .filter((model) => model.tools === true && !isContributorModel(name, model.name))
+      .map((model) => ({ ...model, default: model.defaults?.includes("AC") ?? false })),
+  );
+}
+
+export function isAssistantModel(provider: string, model: string): boolean {
+  if (isContributorModel(provider, model)) return false;
+  return MODELS[provider]?.find((entry) => entry.name === model)?.tools === true;
+}
 
 export function getModelRate(model: ModelDefinition, capability: ModelCapability): ModelRate {
   const matches = model.rates.filter((rate) => rate.capabilities.includes(capability));

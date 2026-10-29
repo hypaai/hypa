@@ -39,6 +39,7 @@ type PromptConfig = {
     providers: Record<string, ProviderPrompt>;
   };
   LAB: Record<string, Record<string, string>>;
+  agent?: { system: string };
 };
 
 const promptConfig = prompts as PromptConfig;
@@ -85,6 +86,10 @@ export function getMtPrompt(
 
 export function getMtThinkingPrompt(): ProviderPrompt {
   return promptConfig.MT.thinkingExplanation;
+}
+
+export function getAgentSystemPrompt(): string {
+  return promptConfig.agent?.system ?? "";
 }
 
 export function getNonHypaMtThinkingPrompt(): PromptMessageTemplate[] {
