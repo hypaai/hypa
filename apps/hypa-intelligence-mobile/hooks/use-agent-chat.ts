@@ -24,6 +24,7 @@ export function useAgentChat(initialChatId?: string, resetKey?: string) {
   const connection = useMemo(() => ({ baseUrl: API_URL, token, fetch: expoFetch as typeof fetch }), [token]);
   const queryClient = useQueryClient();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messagesRef = useRef(messages); messagesRef.current = messages;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [pending, setPending] = useState<PendingTurn | null>(null);
@@ -118,6 +119,9 @@ export function useAgentChat(initialChatId?: string, resetKey?: string) {
       requestId, input: text.trim(), surface: 'app',
       provider: settings?.assistantProvider ?? 'meta', model: settings?.assistantModel ?? 'muse-spark-1.3',
       chatId: turn.chatId, preferAudio,
+      history: token ? undefined : messagesRef.current
+        .filter((row) => row.status === 'success' && row.content.trim())
+        .slice(-20).map((row) => ({ role: row.role, content: row.content.slice(0, 8000) })),
       attachments: images.length ? images.map((image) => ({ data: image.data!, mime: image.mime })) : undefined,
     };
     let reply: ChatMessage = { id, role: 'assistant', content: '', status: 'pending', requestId };

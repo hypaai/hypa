@@ -41,6 +41,7 @@ export class AgentController {
       preferAudio: body.preferAudio,
       context: body.context,
       attachments: body.attachments,
+      history: body.history,
     });
     return this.stream(job);
   }

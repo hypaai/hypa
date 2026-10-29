@@ -86,6 +86,7 @@ export interface OpenAgentInput {
   context?: { fieldText?: string; selectedText?: string };
   attachments?: { data: string; mime?: string }[];
   files?: ChatFileInput[];
+  history?: { role: 'user' | 'assistant'; content: string }[];
 }
 
 @Injectable()
@@ -125,6 +126,7 @@ export class AgentService {
       audio: input.audio ?? null,
       ...(input.files?.length ? { files: input.files } : {}),
       asr: input.asr ?? null,
+      ...(input.history?.length ? { history: input.history } : {}),
       ...(input.toolNames !== undefined ? { toolNames: [...new Set(input.toolNames)].sort() } : {}),
       ...(input.systemInstruction !== undefined ? { systemInstruction: input.systemInstruction } : {}),
       ...(input.modelOptions ? { modelOptions: input.modelOptions } : {}),
@@ -586,7 +588,9 @@ export class AgentService {
         imageNotes.push(text);
       }
     }
-    const history = userId && job.chatId ? await this.history(job.chatId, userId, vision) : [];
+    const history: LoopMessage[] = userId && job.chatId
+      ? await this.history(job.chatId, userId, vision)
+      : userId ? [] : (input.history ?? []).slice(-20).map(({ role, content }) => ({ role, content }));
     const contextLines = [
       input.context?.selectedText ? `Selected text:\n${input.context.selectedText}` : '',
       input.context?.fieldText

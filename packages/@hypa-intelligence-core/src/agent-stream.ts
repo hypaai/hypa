@@ -48,6 +48,7 @@ export interface AgentRequestBody {
   context?: { fieldText?: string; selectedText?: string };
   asr?: { provider: string; model: string };
   preferAudio?: boolean;
+  history?: { role: "user" | "assistant"; content: string }[];
 }
 
 export interface AgentConnection {

@@ -24,6 +24,15 @@ export class AgentContextDto {
   selectedText?: string;
 }
 
+export class AgentHistoryTurnDto {
+  @IsIn(['user', 'assistant'])
+  role: 'user' | 'assistant';
+
+  @IsString()
+  @MaxLength(8000)
+  content: string;
+}
+
 export class AgentAttachmentDto {
   @IsString()
   @IsNotEmpty()
@@ -100,4 +109,11 @@ export class AgentRequestDto {
   @ValidateNested({ each: true })
   @Type(() => AgentAttachmentDto)
   attachments?: AgentAttachmentDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => AgentHistoryTurnDto)
+  history?: AgentHistoryTurnDto[];
 }
