@@ -8217,6 +8217,8 @@ class KeyboardViewController: UIInputViewController {
       ttsModel: tts.model,
       sttProvider: stt.provider,
       sttModel: stt.model,
+      assistantProvider: obj["assistantProvider"] as? String ?? "meta",
+      assistantModel: obj["assistantModel"] as? String ?? "muse-spark-1.3",
       voice: obj["voice"] as? String ?? KeyboardLanguageCatalog.defaultVoice,
       ttsLanguage: obj["ttsLanguage"] as? String
         ?? KeyboardLanguageCatalog.defaultSourceLanguage.code,
@@ -8257,6 +8259,8 @@ class KeyboardViewController: UIInputViewController {
       ttsModel: KeyboardLanguageCatalog.defaultTtsModelName,
       sttProvider: KeyboardLanguageCatalog.defaultProviderName,
       sttModel: KeyboardLanguageCatalog.defaultSttModelName,
+      assistantProvider: "meta",
+      assistantModel: "muse-spark-1.3",
       voice: KeyboardLanguageCatalog.defaultVoice,
       ttsLanguage: KeyboardLanguageCatalog.defaultSourceLanguage.code,
       translateSourceLanguage: KeyboardLanguageCatalog.autoDetect.name,

@@ -1,6 +1,7 @@
 import UIKit
 
 enum KeyboardTool: String, CaseIterable {
+  case ask = "ASK"
   case translate = "TRANSLATE"
   case voice = "VOICE"
   case speak = "SPEAK"
@@ -15,6 +16,7 @@ enum KeyboardTool: String, CaseIterable {
 
   var label: String {
     switch self {
+    case .ask: return "Ask Hypa"
     case .translate: return "Translate"
     case .voice: return "Transcribe"
     case .speak: return "Speak"
@@ -29,6 +31,7 @@ enum KeyboardTool: String, CaseIterable {
 
   var iconKey: String {
     switch self {
+    case .ask: return "mode-ask"
     case .translate: return "mode-translate"
     case .voice: return "mode-mic"
     case .speak: return "mode-tts"

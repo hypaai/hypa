@@ -54,6 +54,7 @@ export const DEFAULT_KEYBOARD_SETTINGS: KeyboardSettings = {
   translationHistory: [],
   longPressDurationMs: 500,
   toolOrder: [
+    'ASK',
     'TRANSLATE',
     'VOICE',
     'SPEAK',

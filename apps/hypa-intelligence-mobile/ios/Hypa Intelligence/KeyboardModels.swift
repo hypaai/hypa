@@ -46,6 +46,8 @@ struct KeyboardSettings {
   let ttsModel: String
   let sttProvider: String
   let sttModel: String
+  let assistantProvider: String
+  let assistantModel: String
   let voice: String
   let ttsLanguage: String
   let translateSourceLanguage: String
@@ -85,6 +87,8 @@ struct KeyboardSettings {
       ttsModel: ttsModel,
       sttProvider: sttProvider,
       sttModel: sttModel,
+      assistantProvider: assistantProvider,
+      assistantModel: assistantModel,
       voice: voice ?? self.voice,
       ttsLanguage: ttsLanguage ?? self.ttsLanguage,
       translateSourceLanguage: translateSourceLanguage ?? self.translateSourceLanguage,
@@ -159,4 +163,5 @@ enum FeatureMode {
   case ttsLanguagePicker
   case sttLanguagePicker
   case textEditing
+  case ask
 }
