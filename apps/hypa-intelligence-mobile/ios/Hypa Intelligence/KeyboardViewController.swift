@@ -657,6 +657,7 @@ class KeyboardViewController: UIInputViewController {
     stopDeleteRepeat(refreshUI: false)
     stopSttListening()
     stopSttPreview()
+    resetAsk()
     stopTts()
     translationTask?.cancel()
     dictionaryTask?.cancel()
@@ -1220,7 +1221,7 @@ class KeyboardViewController: UIInputViewController {
     case .emoji:
       showFullPanel(makeEmojiPanel())
       return
-    case .keyboard, .translate, .stt, .tts, .dictionary, .clipboard, .textEditing:
+    case .keyboard, .translate, .stt, .tts, .dictionary, .clipboard, .textEditing, .ask:
       break
     }
 
@@ -1283,6 +1284,10 @@ class KeyboardViewController: UIInputViewController {
       let header = makeDictionaryHeader()
       dictionaryHeaderView = header
       if !pickerSearchActive { view.addSubview(header) }
+    case .ask:
+      let header = makeAskHeader()
+      translateHeaderView = header
+      view.addSubview(header)
     default: break
     }
 
@@ -1314,6 +1319,7 @@ class KeyboardViewController: UIInputViewController {
     if isToolsPanelOpen { return makeToolsPanel() }
     if featureMode == .clipboard { return makeClipboardPanel() }
     if featureMode == .textEditing { return makeTextEditingPanel() }
+    if featureMode == .ask, askNeedsFullAccess || askShowsDetails { return makeAskPanel() }
     return nil
   }
 
@@ -1468,6 +1474,10 @@ class KeyboardViewController: UIInputViewController {
     case .dictionary:
       let header = makeDictionaryHeader()
       dictionaryHeaderView = header
+      view.addSubview(header)
+    case .ask:
+      let header = makeAskHeader()
+      translateHeaderView = header
       view.addSubview(header)
     default: break
     }
@@ -1796,6 +1806,9 @@ class KeyboardViewController: UIInputViewController {
   private func activateTool(_ tool: KeyboardTool) {
     isToolsPanelOpen = false
     switch tool {
+    case .ask:
+      toggleAsk()
+
     case .translate:
       featureMode = (featureMode == .translate) ? .keyboard : .translate
 
@@ -2296,6 +2309,930 @@ class KeyboardViewController: UIInputViewController {
       btn.addAction(UIAction { [weak self] _ in self?.triggerTranslate() }, for: .touchUpInside)
     }
     return btn
+  }
+
+  // MARK: - Ask Hypa
+
+  private enum AskOutcome {
+    case replaced, inserted, restored, shown, draftChanged, recovered
+  }
+
+  private struct AskStep {
+    let id: String
+    let label: String
+    var ok: Bool?
+  }
+
+  private struct AskTurn {
+    let requestId = UUID().uuidString.lowercased()
+    var payload: [String: Any] = [:]
+    var sentSelection: String?
+    var sentDocument: String?
+    var activity: String
+    var steps: [AskStep] = []
+    var text = ""
+    var speak = false
+    var audioURL: String?
+    var chatId: String?
+    var outcome: AskOutcome?
+    var error: String?
+    var errorDetail: String?
+    var retryable = true
+  }
+
+  private static let askContextLimit = 5000
+  private static let askToolLabels: [String: (running: String, done: String)] = [
+    "translate_message": ("Translating", "Translated"),
+    "text_to_speech": ("Preparing audio", "Spoke"),
+    "speech_to_text": ("Transcribing", "Transcribed"),
+    "look_up_term": ("Looking up the word", "Looked up"),
+    "extract_text_from_image": ("Reading the image", "Read image"),
+    "translate_and_speak": ("Translating and speaking", "Translated and spoke"),
+  ]
+
+  private var askInput = ""
+  private var askTurn: AskTurn?
+  private var askTask: Task<Void, Never>?
+  private var askGeneration = 0
+  private var isAskRecording = false
+  private var askRecordingStartedAt = Date()
+  private var askRecordingTimer: Timer?
+  private weak var askRecordingLabel: UILabel?
+  private var askMicUnavailable = false
+  private var askShowsDetails = false
+  private var askCopied = false
+
+  private var askNeedsFullAccess: Bool { !hasFullAccess }
+
+  private var askCapturesKeys: Bool {
+    featureMode == .ask && !askNeedsFullAccess && !askShowsDetails && askTurn == nil && !isAskRecording
+  }
+
+  private var askCanUndo: Bool {
+    lastTranslationState != nil && (askTurn?.outcome == .replaced || askTurn?.outcome == .inserted)
+  }
+
+  private var capturesTyping: Bool { pickerSearchActive || askCapturesKeys }
+
+  private func appendCapturedText(_ text: String) {
+    guard askCapturesKeys else { return updatePickerSearchQuery(text) }
+    askInput.append(text)
+    refreshAsk()
+  }
+
+  private func deleteCapturedCharacter() {
+    guard askCapturesKeys else { return deletePickerSearchCharacter() }
+    guard !askInput.isEmpty else { return }
+    askInput.removeLast()
+    refreshAsk()
+  }
+
+  private func toggleAsk() {
+    if featureMode == .ask {
+      closeAsk()
+      return
+    }
+    resetAsk()
+    featureMode = .ask
+  }
+
+  private func closeAsk() {
+    resetAsk()
+    discardTranslationUndo(refreshUI: false)
+    featureMode = .keyboard
+    rebuildKeyboard()
+  }
+
+  private func resetAsk() {
+    askGeneration += 1
+    askTask?.cancel()
+    askTask = nil
+    stopAskRecording(send: false)
+    if askTurn?.speak == true { stopTts() }
+    askTurn = nil
+    askInput = ""
+    askShowsDetails = false
+    askCopied = false
+  }
+
+  private func refreshAsk() {
+    guard featureMode == .ask else { return }
+    let wantsPanel = askNeedsFullAccess || askShowsDetails
+    guard !wantsPanel, boardPanelView == nil, fullPanelView == nil,
+      let old = translateHeaderView
+    else {
+      rebuildKeyboard()
+      return
+    }
+    let header = makeAskHeader()
+    header.frame = old.frame
+    view.insertSubview(header, aboveSubview: old)
+    old.removeFromSuperview()
+    translateHeaderView = header
+  }
+
+  private func startNewAsk() {
+    resetAsk()
+    refreshAsk()
+  }
+
+  private func sendAsk(audio: Data? = nil) {
+    let instruction = askInput.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !askNeedsFullAccess, audio != nil || !instruction.isEmpty else { return }
+    stopTts()
+    askGeneration += 1
+    let generation = askGeneration
+    askTurn = AskTurn(activity: audio == nil ? "Working…" : "Transcribing…")
+    askShowsDetails = false
+    refreshAsk()
+
+    let build: (String?, String?) -> Void = { [weak self] selection, document in
+      guard let self, generation == self.askGeneration else { return }
+      let limit = Self.askContextLimit
+      var context: [String: Any] = [:]
+      if let selection {
+        context["selectedText"] = selection
+        let surrounding = self.limitedTextContext().surroundingText
+        if surrounding.utf16.count <= limit { context["fieldText"] = surrounding }
+      } else if let document, !document.isEmpty {
+        context["fieldText"] = document
+      }
+      if (selection ?? document ?? "").utf16.count > limit {
+        self.askTurn?.error = "Select a shorter section"
+        self.askTurn?.errorDetail =
+          "Ask Hypa works on up to \(limit) characters. Select a shorter part of the text and try again."
+        self.askTurn?.retryable = false
+        self.refreshAsk()
+        return
+      }
+      var payload: [String: Any] = [
+        "requestId": self.askTurn?.requestId ?? UUID().uuidString.lowercased(),
+        "input": instruction,
+        "provider": self.settings.assistantProvider,
+        "model": self.settings.assistantModel,
+        "surface": "keyboard",
+        "language": self.resolvedTtsLanguage().name,
+      ]
+      if !context.isEmpty { payload["context"] = context }
+      if let audio {
+        let stt = KeyboardLanguageCatalog.resolveStt(
+          selectedProvider: self.settings.sttProvider, selectedModel: self.settings.sttModel)
+        payload["audio"] = audio.base64EncodedString()
+        payload["audioType"] = "base64"
+        payload["asr"] = ["provider": stt.provider, "model": stt.model]
+      }
+      self.askTurn?.payload = payload
+      self.askTurn?.sentSelection = selection
+      self.askTurn?.sentDocument = selection == nil ? (document ?? "") : nil
+      self.streamAsk(generation)
+    }
+
+    if let selection = textDocumentProxy.selectedText, !selection.isEmpty {
+      build(selection, nil)
+    } else {
+      readFullDocumentText(
+        isCancelled: { [weak self] in self?.askGeneration != generation },
+        completion: { text, _ in build(nil, text) })
+    }
+  }
+
+  private func retryAsk() {
+    guard let turn = askTurn, turn.retryable, !turn.payload.isEmpty else { return }
+    askGeneration += 1
+    var fresh = AskTurn(
+      payload: turn.payload, sentSelection: turn.sentSelection, sentDocument: turn.sentDocument,
+      activity: turn.payload["audio"] == nil ? "Working…" : "Transcribing…")
+    fresh.payload["requestId"] = fresh.requestId
+    askTurn = fresh
+    refreshAsk()
+    streamAsk(askGeneration)
+  }
+
+  private func streamAsk(_ generation: Int) {
+    guard let turn = askTurn, let url = apiURL("/v2/agent"),
+      let request = makeAuthorizedPostRequest(
+        url: url, token: settings.token, payload: turn.payload, timeout: 120,
+        accept: "text/event-stream")
+    else {
+      failAsk(generation, "Couldn't connect", detail: nil)
+      return
+    }
+    askTask = Task { [weak self] in
+      do {
+        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+          var body = Data()
+          for try await byte in bytes { body.append(byte) }
+          self?.failAskHttp(generation, status: http.statusCode, body: body)
+          return
+        }
+        for try await line in bytes.lines {
+          guard line.hasPrefix("data:"),
+            let data = line.dropFirst(5).trimmingCharacters(in: .whitespaces).data(using: .utf8),
+            let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+          else { continue }
+          self?.handleAskEvent(event, generation: generation)
+        }
+        self?.askStreamEnded(generation, error: nil)
+      } catch {
+        self?.askStreamEnded(generation, error: error)
+      }
+    }
+  }
+
+  private func handleAskEvent(_ event: [String: Any], generation: Int) {
+    guard generation == askGeneration, askTurn != nil else { return }
+    if let chatId = event["chatId"] as? String { askTurn?.chatId = chatId }
+    switch event["type"] as? String {
+    case "transcript":
+      askTurn?.activity = "Working…"
+      askTurn?.steps.append(AskStep(id: "transcript", label: "Transcribed", ok: true))
+    case "tool_call":
+      guard let name = event["name"] as? String, name != "finish" else { return }
+      let labels = Self.askToolLabels[name] ?? ("Working", "Used a tool")
+      askTurn?.activity = labels.running + "…"
+      askTurn?.steps.append(
+        AskStep(id: event["id"] as? String ?? name, label: labels.done, ok: nil))
+    case "tool_result":
+      guard let id = event["id"] as? String,
+        let index = askTurn?.steps.firstIndex(where: { $0.id == id })
+      else { return }
+      askTurn?.steps[index].ok = event["ok"] as? Bool ?? false
+    case "audio":
+      if let url = event["url"] as? String, !url.isEmpty { askTurn?.audioURL = url }
+    case "done":
+      askTurn?.text = (event["text"] as? String ?? "").trimmingCharacters(
+        in: .whitespacesAndNewlines)
+      askTurn?.speak = event["speak"] as? Bool ?? false
+      if let url = event["audioUrl"] as? String, !url.isEmpty { askTurn?.audioURL = url }
+      completeAsk(action: event["action"] as? String ?? "show", generation: generation)
+      return
+    case "error":
+      let code = event["code"] as? String ?? ""
+      let limited = ["rate_limited", "budget_exceeded"].contains(code)
+      failAsk(
+        generation, limited ? "Request limit reached" : "Couldn't finish",
+        detail: event["message"] as? String)
+      return
+    default:
+      return
+    }
+    refreshAsk()
+  }
+
+  private func askStreamEnded(_ generation: Int, error: Error?) {
+    guard generation == askGeneration, let turn = askTurn, turn.outcome == nil, turn.error == nil
+    else { return }
+    if error is CancellationError || (error as? URLError)?.code == .cancelled { return }
+    recoverAsk(generation)
+  }
+
+  private func recoverAsk(_ generation: Int) {
+    guard let requestId = askTurn?.requestId,
+      let url = apiURL("/v2/agent/\(requestId)")
+    else { return }
+    askTurn?.activity = "Reconnecting…"
+    refreshAsk()
+    var request = URLRequest(url: url)
+    request.timeoutInterval = 15
+    authorizeAsk(&request)
+    let deadline = Date().addingTimeInterval(90)
+    askTask = Task { [weak self] in
+      while !Task.isCancelled {
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+          (response as? HTTPURLResponse)?.statusCode == 200,
+          let body = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { break }
+        guard let self, generation == self.askGeneration else { return }
+        switch body["status"] as? String {
+        case "done":
+          self.askTurn?.text = (body["message"] as? String ?? "").trimmingCharacters(
+            in: .whitespacesAndNewlines)
+          self.askTurn?.outcome = .recovered
+          self.refreshAsk()
+          return
+        case "failed":
+          self.failAsk(generation, "Couldn't finish", detail: nil)
+          return
+        default:
+          if Date() > deadline { break }
+          try? await Task.sleep(nanoseconds: 1_500_000_000)
+          continue
+        }
+        break
+      }
+      guard !Task.isCancelled else { return }
+      self?.failAsk(generation, "Couldn't connect", detail: nil)
+    }
+  }
+
+  private func authorizeAsk(_ request: inout URLRequest) {
+    let token = settings.token.trimmingCharacters(in: .whitespacesAndNewlines)
+    if !token.isEmpty { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+  }
+
+  private func failAskHttp(_ generation: Int, status: Int, body: Data) {
+    guard generation == askGeneration else { return }
+    let json = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any]
+    let message = (json?["message"] as? String) ?? (json?["message"] as? [String])?.joined(
+      separator: ", ")
+    let title: String
+    switch status {
+    case 402, 429: title = "Request limit reached"
+    case 413: title = "Select a shorter section"
+    default: title = KeyboardErrorCatalog.http(status)
+    }
+    failAsk(generation, title, detail: message)
+  }
+
+  private func failAsk(_ generation: Int, _ title: String, detail: String?) {
+    guard generation == askGeneration else { return }
+    askTurn?.error = title
+    askTurn?.errorDetail = detail
+    refreshAsk()
+  }
+
+  private func completeAsk(action: String, generation: Int) {
+    guard let turn = askTurn else { return }
+    let text = turn.text
+    guard action != "show", !text.isEmpty else {
+      askTurn?.outcome = .shown
+      playAskAudio()
+      refreshAsk()
+      return
+    }
+    let apply: (Bool) -> Void = { [weak self] unchanged in
+      guard let self, generation == self.askGeneration else { return }
+      guard unchanged else {
+        self.askTurn?.outcome = .draftChanged
+        self.playAskAudio()
+        self.refreshAsk()
+        return
+      }
+      self.applyAskText(text, insertAtCursor: action == "insert" || turn.sentSelection != nil)
+    }
+    if let selection = turn.sentSelection {
+      apply(textDocumentProxy.selectedText == selection)
+    } else {
+      readFullDocumentText(
+        isCancelled: { [weak self] in self?.askGeneration != generation },
+        completion: { current, _ in apply(current == turn.sentDocument) })
+    }
+  }
+
+  private func applyAskText(_ text: String, insertAtCursor: Bool) {
+    translationMutationGeneration += 1
+    let generation = translationMutationGeneration
+    lastTranslationState = nil
+    if insertAtCursor {
+      let context = limitedTextContext()
+      let state = LastTranslationState(
+        translatedText: text,
+        scope: .selection(
+          expectedBefore: String((context.before + text).suffix(contextBeforeLimit)),
+          expectedAfter: context.after, original: context.selected))
+      isMutatingTranslationDocument = true
+      textDocumentProxy.insertText(text)
+      appendToLocalTextCache(text)
+      armAskUndo(state, generation: generation, outcome: context.selected.isEmpty ? .inserted : .replaced)
+      return
+    }
+    let original = askTurn?.sentDocument ?? ""
+    applyTranslatedText(text, generation: generation) { [weak self] in
+      self?.armAskUndo(
+        LastTranslationState(
+          translatedText: text, scope: .document(expected: text, original: original)),
+        generation: generation, outcome: original.isEmpty ? .inserted : .replaced)
+    }
+  }
+
+  private func armAskUndo(_ state: LastTranslationState, generation: Int, outcome: AskOutcome) {
+    guard isCurrentTranslationGeneration(generation) else { return }
+    isMutatingTranslationDocument = false
+    isTraversingDocument = false
+    lastTranslationState = state
+    suppressTranslationUndoHostSync()
+    askTurn?.outcome = outcome
+    playAskAudio()
+    refreshAsk()
+  }
+
+  private func undoAsk() {
+    guard askCanUndo else { return }
+    stopTts()
+    askTurn?.outcome = .restored
+    undoTranslation()
+    refreshAsk()
+  }
+
+  private func playAskAudio() {
+    guard let turn = askTurn, turn.speak, let raw = turn.audioURL else { return }
+    let generation = beginTtsRequest()
+    activeDictionarySpeechIdentifier = nil
+    ttsAudioData = nil
+    if raw.hasPrefix("data:") {
+      guard let comma = raw.firstIndex(of: ","),
+        let data = Data(base64Encoded: String(raw[raw.index(after: comma)...]))
+      else { return }
+      playTtsAudio(data, generation: generation)
+      return
+    }
+    guard let url = raw.hasPrefix("http") ? URL(string: raw) : apiURL(raw) else { return }
+    var request = URLRequest(url: url)
+    authorizeAsk(&request)
+    isTtsLoading = true
+    ttsTask = URLSession.shared.dataTask(with: request) { [weak self] data, response, _ in
+      DispatchQueue.main.async {
+        guard let self, self.isCurrentTtsRequest(generation) else { return }
+        guard let data, (response as? HTTPURLResponse)?.statusCode == 200 else {
+          self.isTtsLoading = false
+          self.refreshAsk()
+          return
+        }
+        self.playTtsAudio(data, generation: generation)
+      }
+    }
+    ttsTask?.resume()
+  }
+
+  private func copyAskResult() {
+    guard let text = askTurn?.text, !text.isEmpty else { return }
+    UIPasteboard.general.string = text
+    askCopied = true
+    refreshAsk()
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+      guard let self, self.askCopied else { return }
+      self.askCopied = false
+      self.refreshAsk()
+    }
+  }
+
+  private func openAskInHypa() {
+    let paths = [askTurn?.chatId.map { "hypaintelligence://chat/\($0)" }, "hypaintelligence://chat"]
+    openFirstAvailableHostURL(paths.compactMap { $0.flatMap(URL.init(string:)) }[...])
+  }
+
+  private func startAskRecording() {
+    guard !isAskRecording, askTurn == nil else { return }
+    stopTts()
+    AVAudioSession.sharedInstance().requestRecordPermission { [weak self] allowed in
+      DispatchQueue.main.async {
+        guard let self, self.featureMode == .ask else { return }
+        guard allowed else {
+          self.askMicUnavailable = true
+          self.refreshAsk()
+          return
+        }
+        do {
+          try self.startAudioCapture()
+          self.isAskRecording = true
+          self.askRecordingStartedAt = Date()
+          self.askRecordingTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) {
+            [weak self] _ in
+            guard let self else { return }
+            self.askRecordingLabel?.text = self.askRecordingElapsed()
+          }
+        } catch {
+          devLog("[ASK] ✗ %@", error.localizedDescription)
+          self.askMicUnavailable = true
+        }
+        self.refreshAsk()
+      }
+    }
+  }
+
+  private func stopAskRecording(send: Bool) {
+    guard isAskRecording else { return }
+    stopAudioCapture()
+    isAskRecording = false
+    askRecordingTimer?.invalidate()
+    askRecordingTimer = nil
+    let pcm: Data = sttAudioQueue.sync {
+      let recorded = sttFullRecording
+      sttFullRecording = Data()
+      return recorded
+    }
+    guard send, !pcm.isEmpty else {
+      if send { refreshAsk() }
+      return
+    }
+    sendAsk(audio: buildWavData(pcm: pcm, sampleRate: 16000))
+  }
+
+  private func askRecordingElapsed() -> String {
+    let seconds = Int(Date().timeIntervalSince(askRecordingStartedAt))
+    return String(format: "%d:%02d", seconds / 60, seconds % 60)
+  }
+
+  private func makeAskHeader() -> UIView {
+    if askNeedsFullAccess || askShowsDetails {
+      var trailing: [UIView] = []
+      if askShowsDetails, askTurn?.text.isEmpty == false { trailing.append(makeAskCopyButton()) }
+      if askShowsDetails {
+        trailing.append(
+          makeAskIconButton("keyboard", label: "Show keyboard") { [weak self] in
+            self?.askShowsDetails = false
+            self?.rebuildKeyboard()
+          })
+      }
+      return makeAskRow(icon: nil, title: "Ask Hypa", trailing: trailing, info: false)
+    }
+    if isAskRecording { return makeAskRecordingRow() }
+    guard let turn = askTurn else { return makeAskPromptRow() }
+
+    if let error = turn.error {
+      let retry = turn.retryable
+        ? [makeAskPill("Retry") { [weak self] in self?.retryAsk() }] : []
+      return makeAskRow(
+        icon: makeAskIcon(retry.isEmpty ? "text.viewfinder" : "exclamationmark.circle"),
+        title: error, trailing: retry)
+    }
+    guard let outcome = turn.outcome else {
+      return makeAskRow(icon: makeAskSpinner(), title: turn.activity, trailing: [])
+    }
+
+    let undo = askCanUndo ? [makeAskPill("Undo") { [weak self] in self?.undoAsk() }] : []
+    let edited = outcome == .replaced || outcome == .inserted
+    if turn.speak && isTtsLoading {
+      return makeAskRow(icon: makeAskSpinner(), title: "Preparing audio…", trailing: undo)
+    }
+    if turn.speak && isTtsPlaying {
+      let wave = WaveformView(barCount: 7, barMaxHeight: 16, color: settings.theme.label)
+      wave.usesAnimatedWaveform = useAnimatedWaveform
+      wave.setAnimating(true)
+      wave.widthAnchor.constraint(equalToConstant: 34).isActive = true
+      wave.heightAnchor.constraint(equalToConstant: 20).isActive = true
+      let stop = makeAskIconButton("stop", label: "Stop") { [weak self] in
+        self?.pauseTtsPlayback()
+        self?.refreshAsk()
+      }
+      return makeAskRow(
+        icon: wave, title: edited ? "Done · playing…" : "Reading aloud…", trailing: undo + [stop])
+    }
+    if turn.speak && ttsAudioData != nil {
+      let play = makeAskIconButton("play", label: "Play") { [weak self] in
+        self?.resumeTtsPlayback()
+      }
+      return makeAskRow(
+        icon: makeAskIcon(edited ? "checkmark" : "speaker.wave.2"),
+        title: edited ? (outcome == .inserted ? "Inserted" : "Done") : "Audio ready",
+        trailing: undo + [play])
+    }
+
+    switch outcome {
+    case .replaced:
+      return makeAskRow(icon: makeAskIcon("checkmark"), title: "Done", trailing: undo)
+    case .inserted:
+      return makeAskRow(icon: makeAskIcon("checkmark"), title: "Inserted", trailing: undo)
+    case .restored:
+      return makeAskRow(
+        icon: makeAskIcon("arrow.uturn.backward"), title: "Original restored",
+        trailing: [makeAskPill("Ask") { [weak self] in self?.startNewAsk() }])
+    case .shown:
+      let line = turn.text.components(separatedBy: .newlines).first ?? turn.text
+      return makeAskRow(icon: nil, title: line, trailing: [makeAskCopyButton()])
+    case .draftChanged:
+      return makeAskRow(
+        icon: nil, title: "Draft changed · result saved", trailing: [makeAskCopyButton()])
+    case .recovered:
+      return makeAskRow(icon: nil, title: "Your reply is ready", trailing: [makeAskCopyButton()])
+    }
+  }
+
+  private func makeAskRow(icon: UIView?, title: String, trailing: [UIView], info: Bool = true)
+    -> UIView
+  {
+    let header = UIView()
+    header.backgroundColor = .clear
+    let cancel = makeCancelButton { [weak self] in self?.closeAsk() }
+    header.addSubview(cancel)
+
+    let row = UIStackView()
+    row.translatesAutoresizingMaskIntoConstraints = false
+    row.axis = .horizontal
+    row.alignment = .center
+    row.spacing = 8
+    if let icon { row.addArrangedSubview(icon) }
+    let label = UILabel()
+    label.text = title
+    label.textColor = settings.theme.label
+    label.font = .systemFont(ofSize: max(settings.fontSize - 1, 12), weight: .medium)
+    label.lineBreakMode = .byTruncatingTail
+    label.setContentHuggingPriority(.defaultLow, for: .horizontal)
+    label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+    row.addArrangedSubview(label)
+    trailing.forEach { row.addArrangedSubview($0) }
+    if info {
+      row.addArrangedSubview(
+        makeAskIconButton("info.circle", label: "Details") { [weak self] in
+          self?.askShowsDetails = true
+          self?.rebuildKeyboard()
+        })
+    }
+    header.addSubview(row)
+
+    NSLayoutConstraint.activate([
+      cancel.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: panelSideInset),
+      cancel.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+      row.leadingAnchor.constraint(equalTo: cancel.trailingAnchor, constant: 10),
+      row.trailingAnchor.constraint(equalTo: header.trailingAnchor, constant: -panelSideInset),
+      row.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+    ])
+    return header
+  }
+
+  private func makeAskPromptRow() -> UIView {
+    let header = UIView()
+    header.backgroundColor = .clear
+    let cancel = makeCancelButton { [weak self] in self?.closeAsk() }
+    header.addSubview(cancel)
+
+    let field = UIView()
+    field.translatesAutoresizingMaskIntoConstraints = false
+    field.applyKeyAesthetics(
+      background: settings.theme.key, cornerRadius: 17, tint: KeySurface.glyphTint)
+    header.addSubview(field)
+
+    let text = UIStackView()
+    text.translatesAutoresizingMaskIntoConstraints = false
+    text.axis = .horizontal
+    text.alignment = .center
+    text.spacing = 4
+    field.addSubview(text)
+    let label = UILabel()
+    label.font = .systemFont(ofSize: max(settings.fontSize - 1, 12))
+    label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+    let caret = makeBlinkingCaret()
+    if askInput.isEmpty {
+      label.text = askMicUnavailable ? "Type your instruction…" : "Tell Hypa what to do…"
+      label.textColor = UIColor(hex: "#A1A1AA")
+      label.lineBreakMode = .byTruncatingTail
+      text.addArrangedSubview(caret)
+      text.addArrangedSubview(label)
+    } else {
+      label.text = askInput
+      label.textColor = settings.theme.label
+      label.lineBreakMode = .byTruncatingHead
+      text.addArrangedSubview(label)
+      text.addArrangedSubview(caret)
+    }
+
+    let mic = makeSearchCircleIconButton(
+      image: askMicUnavailable
+        ? sfSymbol("mic.slash", size: 14, weight: .medium)
+        : UIImage(named: "ic_audio_mic")?.withRenderingMode(.alwaysTemplate),
+      background: settings.theme.key, tint: settings.theme.label
+    ) { [weak self] in self?.startAskRecording() }
+    mic.accessibilityLabel = "Speak instruction"
+    mic.isEnabled = !askMicUnavailable
+    mic.alpha = askMicUnavailable ? 0.4 : 1
+    header.addSubview(mic)
+
+    let ready = !askInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    let send = makeSearchCircleIconButton(
+      image: sfSymbol("arrow.up", size: 13), background: ready ? settings.theme.pill : settings.theme.key,
+      tint: ready ? settings.theme.pillLabel : settings.theme.label
+    ) { [weak self] in self?.sendAsk() }
+    send.accessibilityLabel = "Send"
+    send.isEnabled = ready
+    send.alpha = ready ? 1 : 0.5
+    header.addSubview(send)
+
+    NSLayoutConstraint.activate([
+      cancel.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: panelSideInset),
+      cancel.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+      field.leadingAnchor.constraint(equalTo: cancel.trailingAnchor, constant: 10),
+      field.trailingAnchor.constraint(equalTo: mic.leadingAnchor, constant: -8),
+      field.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+      field.heightAnchor.constraint(equalToConstant: 34),
+      text.leadingAnchor.constraint(equalTo: field.leadingAnchor, constant: 12),
+      text.trailingAnchor.constraint(lessThanOrEqualTo: field.trailingAnchor, constant: -12),
+      text.centerYAnchor.constraint(equalTo: field.centerYAnchor),
+      mic.trailingAnchor.constraint(equalTo: send.leadingAnchor, constant: -8),
+      mic.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+      send.trailingAnchor.constraint(equalTo: header.trailingAnchor, constant: -panelSideInset),
+      send.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+    ])
+    return header
+  }
+
+  private func makeAskRecordingRow() -> UIView {
+    let header = UIView()
+    header.backgroundColor = .clear
+    let cancel = makeCancelButton { [weak self] in self?.closeAsk() }
+    header.addSubview(cancel)
+
+    let field = UIStackView()
+    field.translatesAutoresizingMaskIntoConstraints = false
+    field.axis = .horizontal
+    field.alignment = .center
+    field.spacing = 8
+    field.isLayoutMarginsRelativeArrangement = true
+    field.layoutMargins = UIEdgeInsets(top: 0, left: 12, bottom: 0, right: 12)
+    field.applyKeyAesthetics(
+      background: settings.theme.key, cornerRadius: 17, tint: KeySurface.glyphTint)
+    let wave = WaveformView(barCount: 7, barMaxHeight: 16, color: settings.theme.label)
+    wave.usesAnimatedWaveform = useAnimatedWaveform
+    wave.setAnimating(true)
+    wave.widthAnchor.constraint(equalToConstant: 34).isActive = true
+    wave.heightAnchor.constraint(equalToConstant: 20).isActive = true
+    let listening = UILabel()
+    listening.text = "Listening…"
+    listening.textColor = settings.theme.label
+    listening.font = .systemFont(ofSize: max(settings.fontSize - 1, 12), weight: .medium)
+    listening.setContentHuggingPriority(.defaultLow, for: .horizontal)
+    let timer = UILabel()
+    timer.text = askRecordingElapsed()
+    timer.textColor = settings.theme.label.withAlphaComponent(0.6)
+    timer.font = .monospacedDigitSystemFont(ofSize: panelCaptionFontSize, weight: .medium)
+    askRecordingLabel = timer
+    [wave, listening, timer].forEach { field.addArrangedSubview($0) }
+    header.addSubview(field)
+
+    let stop = makeSearchCircleIconButton(
+      image: sfSymbol("stop", size: 14, weight: .medium), background: settings.theme.key,
+      tint: settings.theme.label
+    ) { [weak self] in self?.stopAskRecording(send: true) }
+    stop.accessibilityLabel = "Stop and send"
+    header.addSubview(stop)
+
+    NSLayoutConstraint.activate([
+      cancel.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: panelSideInset),
+      cancel.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+      field.leadingAnchor.constraint(equalTo: cancel.trailingAnchor, constant: 10),
+      field.trailingAnchor.constraint(equalTo: stop.leadingAnchor, constant: -8),
+      field.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+      field.heightAnchor.constraint(equalToConstant: 34),
+      stop.trailingAnchor.constraint(equalTo: header.trailingAnchor, constant: -panelSideInset),
+      stop.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+    ])
+    return header
+  }
+
+  private func makeAskIcon(_ systemName: String) -> UIImageView {
+    let icon = UIImageView(image: sfSymbol(systemName, size: 14, weight: .medium))
+    icon.tintColor = settings.theme.label
+    icon.contentMode = .scaleAspectFit
+    icon.setContentHuggingPriority(.required, for: .horizontal)
+    return icon
+  }
+
+  private func makeAskSpinner() -> UIActivityIndicatorView {
+    let spinner = UIActivityIndicatorView(style: .medium)
+    spinner.color = settings.theme.label
+    spinner.startAnimating()
+    return spinner
+  }
+
+  private func makeAskPill(_ title: String, icon: String? = nil, action: @escaping () -> Void)
+    -> UIButton
+  {
+    let btn = UIButton(type: .system)
+    btn.translatesAutoresizingMaskIntoConstraints = false
+    btn.setTitle(title, for: .normal)
+    btn.setTitleColor(settings.theme.label, for: .normal)
+    btn.titleLabel?.font = .systemFont(ofSize: panelOptionFontSize, weight: .medium)
+    if let icon {
+      btn.setImage(sfSymbol(icon, size: 14, weight: .medium), for: .normal)
+      btn.tintColor = settings.theme.label
+      btn.imageEdgeInsets = UIEdgeInsets(top: 0, left: -4, bottom: 0, right: 4)
+    }
+    btn.contentEdgeInsets = UIEdgeInsets(top: 6, left: 8, bottom: 6, right: 8)
+    btn.heightAnchor.constraint(greaterThanOrEqualToConstant: 32).isActive = true
+    btn.setContentCompressionResistancePriority(.required, for: .horizontal)
+    btn.setContentHuggingPriority(.required, for: .horizontal)
+    btn.addAction(UIAction { _ in action() }, for: .touchUpInside)
+    return btn
+  }
+
+  private func makeAskIconButton(
+    _ systemName: String, label: String, action: @escaping () -> Void
+  ) -> UIButton {
+    let btn = UIButton(type: .system)
+    btn.translatesAutoresizingMaskIntoConstraints = false
+    btn.setImage(sfSymbol(systemName, size: 17), for: .normal)
+    btn.tintColor = settings.theme.label
+    btn.accessibilityLabel = label
+    btn.widthAnchor.constraint(equalToConstant: 32).isActive = true
+    btn.heightAnchor.constraint(equalToConstant: 32).isActive = true
+    btn.addAction(UIAction { _ in action() }, for: .touchUpInside)
+    return btn
+  }
+
+  private func makeAskCopyButton() -> UIButton {
+    makeAskPill(askCopied ? "Copied" : "Copy") { [weak self] in self?.copyAskResult() }
+  }
+
+  private func makeAskPanel() -> UIView {
+    let panel = UIView()
+    panel.backgroundColor = .clear
+    if askNeedsFullAccess {
+      let card = makeAccessCard(
+        icon: "lock",
+        title: "Allow Full Access",
+        message: "Ask Hypa needs a network connection. Enable Full Access in Keyboard Settings.",
+        button: "Open Settings"
+      ) { [weak self] in
+        self?.openFirstAvailableHostURL(
+          [UIApplication.openSettingsURLString, "hypaintelligence://settings"]
+            .compactMap(URL.init(string:))[...])
+      }
+      panel.addSubview(card)
+      NSLayoutConstraint.activate([
+        card.leadingAnchor.constraint(equalTo: panel.leadingAnchor, constant: panelSideInset),
+        card.trailingAnchor.constraint(equalTo: panel.trailingAnchor, constant: -panelSideInset),
+        card.centerYAnchor.constraint(equalTo: panel.centerYAnchor),
+      ])
+      return panel
+    }
+
+    let scroll = UIScrollView()
+    scroll.translatesAutoresizingMaskIntoConstraints = false
+    scroll.showsVerticalScrollIndicator = false
+    panel.addSubview(scroll)
+    let stack = UIStackView()
+    stack.translatesAutoresizingMaskIntoConstraints = false
+    stack.axis = .vertical
+    stack.spacing = 10
+    scroll.addSubview(stack)
+
+    let turn = askTurn
+    let caption = UILabel()
+    caption.attributedText = NSAttributedString(
+      string: turn?.error != nil ? "DETAILS" : turn?.outcome == nil ? "WORKING" : "ANSWER",
+      attributes: [.kern: 1.2])
+    caption.textColor = settings.theme.label.withAlphaComponent(0.6)
+    caption.font = .systemFont(ofSize: panelCaptionFontSize, weight: .medium)
+    stack.addArrangedSubview(caption)
+
+    let body = UILabel()
+    body.numberOfLines = 0
+    body.textColor = settings.theme.label
+    body.font = .systemFont(ofSize: max(settings.fontSize + 3, 18))
+    if let error = turn?.error {
+      body.text = turn?.errorDetail.map { "\(error)\n\n\($0)" } ?? error
+    } else if let text = turn?.text, !text.isEmpty {
+      body.text = text
+    } else {
+      body.text = turn?.activity ?? "Tell Hypa what to do."
+    }
+    stack.addArrangedSubview(body)
+
+    if let steps = turn?.steps, !steps.isEmpty {
+      let chips = UIStackView()
+      chips.axis = .horizontal
+      chips.spacing = 6
+      chips.alignment = .leading
+      for step in steps {
+        let mark = step.ok == nil ? "…" : step.ok == true ? "✓" : "✕"
+        chips.addArrangedSubview(makeDictionaryChip("\(mark) \(step.label)"))
+      }
+      let chipScroll = UIScrollView()
+      chipScroll.showsHorizontalScrollIndicator = false
+      chips.translatesAutoresizingMaskIntoConstraints = false
+      chipScroll.addSubview(chips)
+      NSLayoutConstraint.activate([
+        chips.leadingAnchor.constraint(equalTo: chipScroll.contentLayoutGuide.leadingAnchor),
+        chips.trailingAnchor.constraint(equalTo: chipScroll.contentLayoutGuide.trailingAnchor),
+        chips.topAnchor.constraint(equalTo: chipScroll.contentLayoutGuide.topAnchor),
+        chips.bottomAnchor.constraint(equalTo: chipScroll.contentLayoutGuide.bottomAnchor),
+        chips.heightAnchor.constraint(equalTo: chipScroll.frameLayoutGuide.heightAnchor),
+        chipScroll.heightAnchor.constraint(equalToConstant: 30),
+      ])
+      stack.addArrangedSubview(chipScroll)
+    }
+
+    stack.addArrangedSubview(makeDictionaryDivider())
+    let actions = UIStackView()
+    actions.axis = .horizontal
+    actions.distribution = .equalSpacing
+    if turn?.text.isEmpty == false { actions.addArrangedSubview(makeAskCopyButton()) }
+    if turn?.speak == true, ttsAudioData != nil || turn?.audioURL != nil {
+      actions.addArrangedSubview(
+        makeAskPill("Play", icon: "play") { [weak self] in
+          guard let self else { return }
+          if self.ttsAudioData != nil { self.resumeTtsPlayback() } else { self.playAskAudio() }
+        })
+    }
+    if actions.arrangedSubviews.count < 2 { actions.addArrangedSubview(UIView()) }
+    actions.addArrangedSubview(makeAskPill("Open in Hypa ↗") { [weak self] in self?.openAskInHypa() })
+    stack.addArrangedSubview(actions)
+
+    NSLayoutConstraint.activate([
+      scroll.leadingAnchor.constraint(equalTo: panel.leadingAnchor),
+      scroll.trailingAnchor.constraint(equalTo: panel.trailingAnchor),
+      scroll.topAnchor.constraint(equalTo: panel.topAnchor),
+      scroll.bottomAnchor.constraint(equalTo: panel.bottomAnchor),
+      stack.leadingAnchor.constraint(
+        equalTo: scroll.contentLayoutGuide.leadingAnchor, constant: panelSideInset),
+      stack.trailingAnchor.constraint(
+        equalTo: scroll.contentLayoutGuide.trailingAnchor, constant: -panelSideInset),
+      stack.topAnchor.constraint(equalTo: scroll.contentLayoutGuide.topAnchor, constant: 8),
+      stack.bottomAnchor.constraint(equalTo: scroll.contentLayoutGuide.bottomAnchor, constant: -12),
+      stack.widthAnchor.constraint(
+        equalTo: scroll.frameLayoutGuide.widthAnchor, constant: -2 * panelSideInset),
+    ])
+    return panel
   }
 
   private func makeDictionaryHeader() -> UIView {
@@ -2910,6 +3847,7 @@ class KeyboardViewController: UIInputViewController {
 
   private func isToolActive(_ tool: KeyboardTool) -> Bool {
     switch tool {
+    case .ask: return featureMode == .ask
     case .translate: return featureMode == .translate
     case .voice: return isSttListening || isSttStarting || isSttProcessing
     case .speak: return isTtsPlaying || isTtsLoading || ttsAudioData != nil
@@ -2932,48 +3870,13 @@ class KeyboardViewController: UIInputViewController {
     }
     panel.addSubview(backRow)
 
-    let card = UIStackView()
-    card.translatesAutoresizingMaskIntoConstraints = false
-    card.axis = .vertical
-    card.alignment = .fill
-    card.spacing = 10
-    card.isLayoutMarginsRelativeArrangement = true
-    card.layoutMargins = UIEdgeInsets(top: 18, left: 18, bottom: 18, right: 18)
-    card.applyKeyAesthetics(
-      background: settings.theme.key, cornerRadius: KeySurface.cardRadius,
-      tint: KeySurface.glyphTint)
+    let card = makeAccessCard(
+      icon: "person",
+      title: "Sign in to continue",
+      message: "Open Hypa Intelligence to sign in, then return to the keyboard.",
+      button: "Open App to Sign In"
+    ) { [weak self] in self?.openHostAppForLogin() }
     panel.addSubview(card)
-
-    let title = UILabel()
-    title.text = "Sign in to continue"
-    title.textColor = settings.theme.label
-    title.font = .systemFont(ofSize: max(settings.fontSize + 1, 15), weight: .semibold)
-    title.textAlignment = .center
-    card.addArrangedSubview(title)
-
-    let message = UILabel()
-    message.text = "Open Hypa Intelligence to sign in, then return to the keyboard."
-    message.textColor = settings.theme.label.withAlphaComponent(0.72)
-    message.font = .systemFont(ofSize: max(settings.fontSize - 2, 11))
-    message.textAlignment = .center
-    message.numberOfLines = 0
-    card.addArrangedSubview(message)
-
-    let signInButton = UIButton(type: .system)
-    signInButton.translatesAutoresizingMaskIntoConstraints = false
-    signInButton.applyKeyAesthetics(
-      background: settings.theme.accent, cornerRadius: KeySurface.controlRadius,
-      tint: KeySurface.glyphTint, pressedColor: settings.theme.keyPressed)
-    signInButton.setTitle("Open App to Sign In", for: .normal)
-    signInButton.setTitleColor(.white, for: .normal)
-    signInButton.titleLabel?.font = .systemFont(
-      ofSize: max(settings.fontSize - 1, 12), weight: .semibold)
-    signInButton.heightAnchor.constraint(equalToConstant: 42).isActive = true
-    signInButton.addAction(
-      UIAction { [weak self] _ in
-        self?.openHostAppForLogin()
-      }, for: .touchUpInside)
-    card.addArrangedSubview(signInButton)
 
     NSLayoutConstraint.activate([
       backRow.topAnchor.constraint(equalTo: panel.topAnchor, constant: 6),
@@ -2984,6 +3887,54 @@ class KeyboardViewController: UIInputViewController {
       card.centerYAnchor.constraint(equalTo: panel.centerYAnchor, constant: 12),
     ])
     return panel
+  }
+
+  private func makeAccessCard(
+    icon: String, title titleText: String, message messageText: String, button: String,
+    action: @escaping () -> Void
+  ) -> UIStackView {
+    let card = UIStackView()
+    card.translatesAutoresizingMaskIntoConstraints = false
+    card.axis = .vertical
+    card.alignment = .center
+    card.spacing = 10
+
+    let symbol = UIImageView(image: sfSymbol(icon, size: 20))
+    symbol.tintColor = settings.theme.label.withAlphaComponent(0.72)
+    card.addArrangedSubview(symbol)
+
+    let title = UILabel()
+    title.text = titleText
+    title.textColor = settings.theme.label
+    title.font = .systemFont(ofSize: max(settings.fontSize + 1, 15), weight: .semibold)
+    title.textAlignment = .center
+    card.addArrangedSubview(title)
+
+    let message = UILabel()
+    message.text = messageText
+    message.textColor = settings.theme.label.withAlphaComponent(0.72)
+    message.font = .systemFont(ofSize: max(settings.fontSize - 2, 11))
+    message.textAlignment = .center
+    message.numberOfLines = 0
+    card.addArrangedSubview(message)
+    message.widthAnchor.constraint(lessThanOrEqualTo: card.widthAnchor).isActive = true
+
+    let signInButton = UIButton(type: .system)
+    signInButton.translatesAutoresizingMaskIntoConstraints = false
+    signInButton.applyKeyAesthetics(
+      background: settings.theme.pill.withAlphaComponent(0.9), cornerRadius: 21,
+      tint: KeySurface.glyphTint, pressedColor: settings.theme.keyPressed)
+    signInButton.setTitle(button, for: .normal)
+    signInButton.setTitleColor(settings.theme.pillLabel, for: .normal)
+    signInButton.titleLabel?.font = .systemFont(
+      ofSize: max(settings.fontSize - 1, 12), weight: .medium)
+    signInButton.contentEdgeInsets = UIEdgeInsets(top: 0, left: 28, bottom: 0, right: 28)
+    signInButton.heightAnchor.constraint(equalToConstant: 42).isActive = true
+    card.setCustomSpacing(16, after: message)
+    signInButton.addAction(
+      UIAction { _ in action() }, for: .touchUpInside)
+    card.addArrangedSubview(signInButton)
+    return card
   }
 
   private func openHostAppForLogin() {
@@ -3018,12 +3969,37 @@ class KeyboardViewController: UIInputViewController {
       return
     }
 
-    extensionContext?.open(url) { [weak self] opened in
+    let next: (Bool) -> Void = { [weak self] opened in
       guard !opened else { return }
       DispatchQueue.main.async {
         self?.openFirstAvailableHostURL(urls.dropFirst(), onFailure: onFailure)
       }
     }
+    if !openURLThroughApplication(url, completion: next) {
+      extensionContext?.open(url, completionHandler: next)
+    }
+  }
+
+  // Keyboard extensions can't use extensionContext.open, and UIApplication.open is
+  // extension-unavailable, so reach the app object through the responder chain.
+  private func openURLThroughApplication(
+    _ url: URL, completion: @escaping (Bool) -> Void
+  ) -> Bool {
+    let selector = NSSelectorFromString("openURL:options:completionHandler:")
+    guard let appClass = NSClassFromString("UIApplication") else { return false }
+    var responder: UIResponder? = self
+    while let current = responder {
+      if current.isKind(of: appClass), current.responds(to: selector) {
+        typealias Open = @convention(c) (
+          AnyObject, Selector, NSURL, NSDictionary, @convention(block) (Bool) -> Void
+        ) -> Void
+        let open = unsafeBitCast(current.method(for: selector), to: Open.self)
+        open(current, selector, url as NSURL, NSDictionary(), completion)
+        return true
+      }
+      responder = current.next
+    }
+    return false
   }
 
   private func makeSearchCircleIconButton(
@@ -5691,6 +6667,7 @@ class KeyboardViewController: UIInputViewController {
     "emoji": "face.smiling",
     "mode-emoji": "face.smiling",
     "mode-settings": "gearshape",
+    "mode-ask": "bubble.left",
   ]
 
   private func symCfg(_ pt: CGFloat = 17) -> UIImage.SymbolConfiguration {
@@ -5750,15 +6727,16 @@ class KeyboardViewController: UIInputViewController {
     guard !isMutatingTranslationDocument else { return }
     let key = sender.keyName
     guard !key.isEmpty else { return }
-    if pickerSearchActive {
+    let boardKeys = ["alpha", "symbols", "symbols-basic", "symbols-extended", "shift", "next"]
+    if capturesTyping && !(askCapturesKeys && boardKeys.contains(key)) {
       if key == "space" {
-        updatePickerSearchQuery(" ")
+        appendCapturedText(" ")
       } else if key == "return" {
-        closePickerSearch()
+        if askCapturesKeys { sendAsk() } else { closePickerSearch() }
       } else if !["alpha", "symbols", "shift", "emoji"].contains(key) {
         let typed = isShifted ? keyboardUppercased(key) : key
         sender.committedText = typed
-        updatePickerSearchQuery(typed)
+        appendCapturedText(typed)
         if isShifted {
           resetShift()
           refreshLetterTitles()
@@ -5823,8 +6801,8 @@ class KeyboardViewController: UIInputViewController {
   }
 
   private func backspaceDown() {
-    if pickerSearchActive {
-      deletePickerSearchCharacter()
+    if capturesTyping {
+      deleteCapturedCharacter()
     } else {
       deleteOneCharacter(refreshUI: false)
     }
@@ -6013,7 +6991,7 @@ class KeyboardViewController: UIInputViewController {
   }
 
   private func beginCursorTrackpad(at origin: CGPoint, key: KeyButton) -> Bool {
-    guard cursorTrackpad == nil, alternatePopupView == nil, !pickerSearchActive,
+    guard cursorTrackpad == nil, alternatePopupView == nil, !capturesTyping,
       !isMutatingTranslationDocument
     else { return false }
     correctionLedger.settle()
@@ -6102,8 +7080,8 @@ class KeyboardViewController: UIInputViewController {
   private func startDeleteRepeat() {
     deleteRepeatTimer?.invalidate()
     let timer = Timer(timeInterval: 0.065, repeats: true) { [weak self] _ in
-      if self?.pickerSearchActive == true {
-        self?.deletePickerSearchCharacter()
+      if self?.capturesTyping == true {
+        self?.deleteCapturedCharacter()
       } else {
         self?.deleteOneCharacter(refreshUI: false)
       }
@@ -6270,20 +7248,20 @@ class KeyboardViewController: UIInputViewController {
   }
 
   private func replaceCommittedText(_ previous: String?, with replacement: String) {
-    if !pickerSearchActive, let previous {
+    if !capturesTyping, let previous {
       guard textDocumentProxy.selectedText?.isEmpty != false,
         textDocumentProxy.documentContextBeforeInput?.hasSuffix(previous) == true else { return }
     }
     if let previous, !previous.isEmpty {
-      if pickerSearchActive {
-        previous.forEach { _ in deletePickerSearchCharacter() }
+      if capturesTyping {
+        previous.forEach { _ in deleteCapturedCharacter() }
       } else {
         previous.forEach { _ in textDocumentProxy.deleteBackward() }
         removeFromLocalTextCache(count: previous.count)
       }
     }
     insertKeyboardText(replacement)
-    if !pickerSearchActive, replacement.count > 1,
+    if !capturesTyping, replacement.count > 1,
       let before = textDocumentProxy.documentContextBeforeInput,
       let after = textDocumentProxy.documentContextAfterInput,
       before.hasSuffix(replacement)
@@ -6296,8 +7274,8 @@ class KeyboardViewController: UIInputViewController {
     recentAlternateUnit = nil
     let text = text.precomposedStringWithCanonicalMapping
     guard !isMutatingTranslationDocument else { return }
-    if pickerSearchActive {
-      updatePickerSearchQuery(text)
+    if capturesTyping {
+      appendCapturedText(text)
       if isShifted {
         resetShift()
         refreshLetterTitles()
@@ -6456,6 +7434,7 @@ class KeyboardViewController: UIInputViewController {
         || (key == "mode-clipboard" && featureMode == .clipboard)
         || (key == "mode-text-editing" && featureMode == .textEditing)
         || (key == "mode-more" && isToolsPanelOpen)
+        || (key == "mode-ask" && featureMode == .ask)
         || (key == "mode-languages" && featureMode == .keyboardLanguagePicker)
       container.applyBackground(isActive ? settings.theme.accent : settings.theme.toolbar)
       container.alpha = 1
@@ -7006,7 +7985,9 @@ class KeyboardViewController: UIInputViewController {
   }
 
   private func refreshTranslateActionAppearance() {
-    guard featureMode == .translate, pickerSearchActive == false else { return }
+    guard featureMode == .translate || featureMode == .ask, pickerSearchActive == false else {
+      return
+    }
     updateUI()
   }
 
