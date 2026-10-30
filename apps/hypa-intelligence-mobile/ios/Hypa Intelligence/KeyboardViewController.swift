@@ -2331,6 +2331,7 @@ class KeyboardViewController: UIInputViewController {
     var activity: String
     var steps: [AskStep] = []
     var text = ""
+    var summary: String?
     var speak = false
     var audioURL: String?
     var chatId: String?
@@ -2564,7 +2565,9 @@ class KeyboardViewController: UIInputViewController {
       askTurn?.text = (event["text"] as? String ?? "").trimmingCharacters(
         in: .whitespacesAndNewlines)
       askTurn?.speak = event["speak"] as? Bool ?? false
+      askTurn?.summary = event["summary"] as? String
       if let url = event["audioUrl"] as? String, !url.isEmpty { askTurn?.audioURL = url }
+      addAskSummarySteps(action: event["action"] as? String ?? "show")
       completeAsk(action: event["action"] as? String ?? "show", generation: generation)
       return
     case "error":
@@ -2578,6 +2581,21 @@ class KeyboardViewController: UIInputViewController {
       return
     }
     refreshAsk()
+  }
+
+  /// Frames the tool steps as Understood → what it did → Spoke, like the app's run summary.
+  private func addAskSummarySteps(action: String) {
+    guard var turn = askTurn else { return }
+    let understood = AskStep(id: "understood", label: "Understood", ok: true)
+    turn.steps.insert(understood, at: turn.steps.first?.id == "transcript" ? 1 : 0)
+    if !turn.steps.contains(where: { $0.id != "transcript" && $0.id != "understood" }) {
+      let label = action == "replace" ? "Rewrote" : action == "insert" ? "Wrote" : "Answered"
+      turn.steps.append(AskStep(id: "action", label: label, ok: true))
+    }
+    if turn.speak {
+      turn.steps.append(AskStep(id: "spoke", label: "Spoke", ok: turn.audioURL != nil))
+    }
+    askTurn = turn
   }
 
   private func askStreamEnded(_ generation: Int, error: Error?) {
@@ -2911,12 +2929,15 @@ class KeyboardViewController: UIInputViewController {
     row.translatesAutoresizingMaskIntoConstraints = false
     row.axis = .horizontal
     row.alignment = .center
-    row.spacing = 8
-    if let icon { row.addArrangedSubview(icon) }
+    row.spacing = 2
+    if let icon {
+      row.addArrangedSubview(icon)
+      row.setCustomSpacing(6, after: icon)
+    }
     let label = UILabel()
     label.text = title
     label.textColor = settings.theme.label
-    label.font = .systemFont(ofSize: max(settings.fontSize - 1, 12), weight: .medium)
+    label.font = .systemFont(ofSize: panelOptionFontSize, weight: .medium)
     label.lineBreakMode = .byTruncatingTail
     label.setContentHuggingPriority(.defaultLow, for: .horizontal)
     label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -2934,7 +2955,7 @@ class KeyboardViewController: UIInputViewController {
     NSLayoutConstraint.activate([
       cancel.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: panelSideInset),
       cancel.centerYAnchor.constraint(equalTo: header.centerYAnchor),
-      row.leadingAnchor.constraint(equalTo: cancel.trailingAnchor, constant: 10),
+      row.leadingAnchor.constraint(equalTo: cancel.trailingAnchor, constant: 8),
       row.trailingAnchor.constraint(equalTo: header.trailingAnchor, constant: -panelSideInset),
       row.centerYAnchor.constraint(equalTo: header.centerYAnchor),
     ])
@@ -2960,7 +2981,7 @@ class KeyboardViewController: UIInputViewController {
     text.spacing = 4
     field.addSubview(text)
     let label = UILabel()
-    label.font = .systemFont(ofSize: max(settings.fontSize - 1, 12))
+    label.font = .systemFont(ofSize: panelOptionFontSize)
     label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     let caret = makeBlinkingCaret()
     if askInput.isEmpty {
@@ -3001,7 +3022,7 @@ class KeyboardViewController: UIInputViewController {
     NSLayoutConstraint.activate([
       cancel.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: panelSideInset),
       cancel.centerYAnchor.constraint(equalTo: header.centerYAnchor),
-      field.leadingAnchor.constraint(equalTo: cancel.trailingAnchor, constant: 10),
+      field.leadingAnchor.constraint(equalTo: cancel.trailingAnchor, constant: 8),
       field.trailingAnchor.constraint(equalTo: mic.leadingAnchor, constant: -8),
       field.centerYAnchor.constraint(equalTo: header.centerYAnchor),
       field.heightAnchor.constraint(equalToConstant: 34),
@@ -3039,12 +3060,12 @@ class KeyboardViewController: UIInputViewController {
     let listening = UILabel()
     listening.text = "Listening…"
     listening.textColor = settings.theme.label
-    listening.font = .systemFont(ofSize: max(settings.fontSize - 1, 12), weight: .medium)
+    listening.font = .systemFont(ofSize: panelOptionFontSize, weight: .medium)
     listening.setContentHuggingPriority(.defaultLow, for: .horizontal)
     let timer = UILabel()
     timer.text = askRecordingElapsed()
     timer.textColor = settings.theme.label.withAlphaComponent(0.6)
-    timer.font = .monospacedDigitSystemFont(ofSize: panelCaptionFontSize, weight: .medium)
+    timer.font = .monospacedDigitSystemFont(ofSize: panelOptionFontSize, weight: .medium)
     askRecordingLabel = timer
     [wave, listening, timer].forEach { field.addArrangedSubview($0) }
     header.addSubview(field)
@@ -3059,7 +3080,7 @@ class KeyboardViewController: UIInputViewController {
     NSLayoutConstraint.activate([
       cancel.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: panelSideInset),
       cancel.centerYAnchor.constraint(equalTo: header.centerYAnchor),
-      field.leadingAnchor.constraint(equalTo: cancel.trailingAnchor, constant: 10),
+      field.leadingAnchor.constraint(equalTo: cancel.trailingAnchor, constant: 8),
       field.trailingAnchor.constraint(equalTo: stop.leadingAnchor, constant: -8),
       field.centerYAnchor.constraint(equalTo: header.centerYAnchor),
       field.heightAnchor.constraint(equalToConstant: 34),
@@ -3097,7 +3118,7 @@ class KeyboardViewController: UIInputViewController {
       btn.tintColor = settings.theme.label
       btn.imageEdgeInsets = UIEdgeInsets(top: 0, left: -4, bottom: 0, right: 4)
     }
-    btn.contentEdgeInsets = UIEdgeInsets(top: 6, left: 8, bottom: 6, right: 8)
+    btn.contentEdgeInsets = UIEdgeInsets(top: 6, left: 6, bottom: 6, right: 6)
     btn.heightAnchor.constraint(greaterThanOrEqualToConstant: 32).isActive = true
     btn.setContentCompressionResistancePriority(.required, for: .horizontal)
     btn.setContentHuggingPriority(.required, for: .horizontal)
@@ -3110,11 +3131,11 @@ class KeyboardViewController: UIInputViewController {
   ) -> UIButton {
     let btn = UIButton(type: .system)
     btn.translatesAutoresizingMaskIntoConstraints = false
-    btn.setImage(sfSymbol(systemName, size: 17), for: .normal)
+    btn.setImage(sfSymbol(systemName, size: 15), for: .normal)
     btn.tintColor = settings.theme.label
     btn.accessibilityLabel = label
-    btn.widthAnchor.constraint(equalToConstant: 32).isActive = true
-    btn.heightAnchor.constraint(equalToConstant: 32).isActive = true
+    btn.widthAnchor.constraint(equalToConstant: 28).isActive = true
+    btn.heightAnchor.constraint(equalToConstant: 28).isActive = true
     btn.addAction(UIAction { _ in action() }, for: .touchUpInside)
     return btn
   }
@@ -3177,6 +3198,15 @@ class KeyboardViewController: UIInputViewController {
       body.text = turn?.activity ?? "Tell Hypa what to do."
     }
     stack.addArrangedSubview(body)
+    if turn?.error == nil, let summary = turn?.summary, !summary.isEmpty {
+      let note = UILabel()
+      note.text = summary
+      note.numberOfLines = 0
+      note.textColor = settings.theme.label.withAlphaComponent(0.6)
+      note.font = .systemFont(ofSize: max(settings.fontSize - 1, 13))
+      stack.setCustomSpacing(4, after: body)
+      stack.addArrangedSubview(note)
+    }
 
     if let steps = turn?.steps, !steps.isEmpty {
       let chips = UIStackView()
