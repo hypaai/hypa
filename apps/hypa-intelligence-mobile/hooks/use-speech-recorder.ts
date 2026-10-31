@@ -14,6 +14,7 @@ type UseSpeechRecorderOptions = {
   asrModel: string;
   provider?: string;
   onTranscript: (text: string) => void;
+  onNoTranscript?: () => void;
   runWithConsent: (action: () => void) => void;
   stopPlayers: () => void;
   toast: ReturnType<typeof useToast>;
@@ -23,6 +24,7 @@ export const useSpeechRecorder = ({
   asrModel,
   provider,
   onTranscript,
+  onNoTranscript,
   runWithConsent,
   stopPlayers,
   toast,
@@ -47,9 +49,11 @@ export const useSpeechRecorder = ({
       if (!mounted.current || variables.epoch !== generation.current) return;
       const textResult = data.text.trim();
       if (textResult) onTranscript(textResult);
+      else onNoTranscript?.();
     },
     onError: (error, variables) => {
       if (!mounted.current || variables.epoch !== generation.current) return;
+      onNoTranscript?.();
       toast.showError(
         "Transcription failed",
         error instanceof Error ? error.message : "Please try again."
@@ -106,7 +110,7 @@ export const useSpeechRecorder = ({
         const audio = await new File(uri).base64();
         if (mounted.current && epoch === generation.current) sttMutation.mutate({ audio, model: asrModel, provider, epoch });
       } catch (error) {
-        if (mounted.current && epoch === generation.current) { setRecordingState('idle'); toast.showError('Transcription failed', error instanceof Error ? error.message : 'Unable to read recording.'); }
+        if (mounted.current && epoch === generation.current) { setRecordingState('idle'); onNoTranscript?.(); toast.showError('Transcription failed', error instanceof Error ? error.message : 'Unable to read recording.'); }
       }
     },
     [asrModel, provider, sttMutation, toast]
@@ -128,6 +132,7 @@ export const useSpeechRecorder = ({
         }
         if (!uri) {
           setRecordingState("idle");
+          onNoTranscript?.();
           return;
         }
         setLastRecordingUri(uri);
@@ -140,6 +145,7 @@ export const useSpeechRecorder = ({
       } catch (error) {
         if (!mounted.current || epoch !== generation.current) return;
         setRecordingState("idle");
+        onNoTranscript?.();
         toast.showError(
           "Recording failed",
           error instanceof Error ? error.message : "Unable to stop recording."

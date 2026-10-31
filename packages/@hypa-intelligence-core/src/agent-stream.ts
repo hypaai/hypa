@@ -188,13 +188,14 @@ export async function waitForAgent(input: {
 export async function resolveAgentAudio(
   url: string,
   connection: AgentConnection,
-  createUrl: (blob: Blob) => string | Promise<string> = (blob) => URL.createObjectURL(blob),
+  createUrl: (bytes: ArrayBuffer, mime: string) => string | Promise<string> = (bytes, mime) =>
+    URL.createObjectURL(new Blob([bytes], { type: mime })),
 ): Promise<string> {
   if (url.startsWith("data:") || url.startsWith("blob:")) return url;
   const absolute = /^https?:/.test(url) ? url : `${connection.baseUrl}${url}`;
   const response = await (connection.fetch ?? fetch)(absolute, { headers: authHeaders(connection) });
   if (!response.ok) throw await readError(response);
-  return createUrl(await response.blob());
+  return createUrl(await response.arrayBuffer(), response.headers.get("content-type") ?? "audio/wav");
 }
 
 const TOOL_LABELS: Record<string, { running: string; failed: string; done: string }> = {

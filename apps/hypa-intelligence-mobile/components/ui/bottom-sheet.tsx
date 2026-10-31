@@ -364,6 +364,7 @@ export function BottomSheet({
   const rBottomSheetStyle = useAnimatedStyle(() => {
     return {
       transform: [{ translateY: translateY.value }],
+     paddingBottom: insets.bottom + Math.max(0, SCREEN_HEIGHT + translateY.value),
     };
   });
 

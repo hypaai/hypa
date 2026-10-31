@@ -30,8 +30,9 @@ import {
   ArrowLeft,
   ArrowUp,
   Camera,
+  Check,
   ChevronDown,
-  ChevronUp,
+  ChevronRight,
   History,
   ImagePlus,
   Info,
@@ -62,7 +63,7 @@ import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { randomUUID } from "expo-crypto";
 import { MODELS, getAssistantModels } from "@hypa/config/models";
 import privacy from "@hypa/config/json/chat-privacy.json";
-import { toolLabels } from "@hypa/intelligence-core/agent-stream";
+import { toolLabels, type AgentStep } from "@hypa/intelligence-core/agent-stream";
 import {
   archiveConversation,
   deleteConversation,
@@ -237,6 +238,9 @@ export function ChatScreen({
         return;
       recordingOwner.current = null;
       void submitRef.current(text, [], voiceRef.current).catch(report);
+    },
+    onNoTranscript: () => {
+      if (voiceRef.current) stopVoice();
     },
     runWithConsent,
     stopPlayers: audio.stop,
@@ -733,6 +737,18 @@ export function ChatScreen({
                     </Text>
                   </View>
                 )}
+                {!mine && !!item.steps?.length && (
+                  <ToolSteps
+                    steps={item.steps}
+                    open={!!expanded[item.id]}
+                    onToggle={() =>
+                      setExpanded((current) => ({
+                        ...current,
+                        [item.id]: !current[item.id],
+                      }))
+                    }
+                  />
+                )}
                 {item.images?.length ? (
                   <View
                     style={{
@@ -864,103 +880,6 @@ export function ChatScreen({
                     </Text>
                   </View>
                 ))}
-                {!!item.steps?.length && (
-                  <View style={{ gap: 6 }}>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={
-                        expanded[item.id]
-                          ? "Hide tool steps"
-                          : "Show tool steps"
-                      }
-                      onPress={() =>
-                        setExpanded((current) => ({
-                          ...current,
-                          [item.id]: !current[item.id],
-                        }))
-                      }
-                      style={{
-                        flexDirection: "row",
-                        flexWrap: "wrap",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      {item.steps.map((step) => (
-                        <View
-                          key={step.id}
-                          style={{
-                            paddingVertical: 4,
-                            paddingHorizontal: 10,
-                            borderRadius: 999,
-                            borderWidth: 1,
-                            borderColor: colors.border,
-                          }}
-                        >
-                          <Text
-                            style={{
-                              color:
-                                step.status === "failed"
-                                  ? colors.text
-                                  : colors.textMuted,
-                              fontSize: 12,
-                              fontFamily: FONTS.main.medium,
-                            }}
-                          >
-                            {step.status === "failed"
-                              ? `${step.label} failed`
-                              : step.label}
-                          </Text>
-                        </View>
-                      ))}
-                      {expanded[item.id] ? (
-                        <ChevronUp color={colors.iconSubtle} size={16} />
-                      ) : (
-                        <ChevronDown color={colors.iconSubtle} size={16} />
-                      )}
-                    </Pressable>
-                    {expanded[item.id] && (
-                      <View
-                        style={{
-                          borderRadius: 14,
-                          backgroundColor: colors.muted,
-                          paddingHorizontal: 12,
-                        }}
-                      >
-                        {item.steps.map((step, index) => (
-                          <View
-                            key={step.id}
-                            style={{
-                              paddingVertical: 10,
-                              gap: 2,
-                              borderTopWidth: index ? 1 : 0,
-                              borderColor: colors.border,
-                            }}
-                          >
-                            <Text
-                              selectable
-                              style={{ color: colors.text, fontSize: 13 }}
-                            >
-                              {toolLabels(step.name).done} · {step.status}
-                              {step.ms != null
-                                ? ` · ${(step.ms / 1000).toFixed(1)} s`
-                                : ""}
-                            </Text>
-                            <Text
-                              selectable
-                              style={{ color: colors.textMuted, fontSize: 13 }}
-                            >
-                              {[step.provider, step.model]
-                                .filter(Boolean)
-                                .join(" / ")}{" "}
-                              {step.detail}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                )}
                 {item.audioUrl && (
                   <Pressable
                     accessibilityRole="button"
@@ -972,7 +891,7 @@ export function ChatScreen({
                         audio.playingId === item.id ||
                         audio.loadingId === item.id
                       )
-                        audio.stop();
+                        stopVoice();
                       else {
                         stopVoice();
                         void audio
@@ -1551,5 +1470,61 @@ function Dot({ color, delay }: { color: string; delay: number }) {
         style,
       ]}
     />
+  );
+}
+
+function ToolSteps({ steps, open, onToggle }: { steps: AgentStep[]; open: boolean; onToggle: () => void }) {
+  const colors = useThemeColors();
+  const running = steps.find((step) => step.status === "running");
+  const failed = steps.filter((step) => step.status === "failed").length;
+  const startedAt = Math.min(...steps.map((step) => step.startedAt));
+  const endedAt = Math.max(...steps.map((step) => step.startedAt + (step.ms ?? 0)));
+  const seconds = ((endedAt - startedAt) / 1000).toFixed(1);
+  const summary = running
+    ? `${toolLabels(running.name).running}…`
+    : `${steps.length} tool${steps.length === 1 ? "" : "s"} · ${seconds}s${failed ? ` · ${failed} failed` : ""}`;
+  return (
+    <View style={{ gap: 6 }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${summary}. ${open ? "Hide" : "Show"} tool steps`}
+        onPress={onToggle}
+        hitSlop={8}
+        style={{ flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start" }}
+      >
+        {running && <TypingDots color={colors.textSubtle} />}
+        <Text style={{ color: colors.textSubtle, fontSize: 13, fontFamily: FONTS.main.medium }}>{summary}</Text>
+        {open ? <ChevronDown color={colors.iconSubtle} size={14} /> : <ChevronRight color={colors.iconSubtle} size={14} />}
+      </Pressable>
+      {open && (
+        <View style={{ borderLeftWidth: 2, borderColor: colors.border, marginLeft: 4, paddingLeft: 12, gap: 10 }}>
+          {steps.map((step) => (
+            <View key={step.id} style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+              {step.status === "ok" ? (
+                <Check color={colors.iconMuted} size={14} style={{ marginTop: 2 }} />
+              ) : step.status === "failed" ? (
+                <X color={colors.icon} size={14} style={{ marginTop: 2 }} />
+              ) : (
+                <View style={{ marginTop: 2 }}><TypingDots color={colors.textSubtle} /></View>
+              )}
+              <View style={{ flex: 1, gap: 1 }}>
+                <Text selectable style={{ color: colors.text, fontSize: 13 }}>
+                  {step.status === "running" ? toolLabels(step.name).running : toolLabels(step.name).done}
+                  {step.status === "failed" ? " · failed" : ""}
+                </Text>
+                {!!(step.provider || step.model || step.detail) && (
+                  <Text selectable style={{ color: colors.textSubtle, fontSize: 12 }}>
+                    {[[step.provider, step.model].filter(Boolean).join(" / "), step.detail].filter(Boolean).join(" · ")}
+                  </Text>
+                )}
+              </View>
+              {step.ms != null && (
+                <Text style={{ color: colors.textSubtle, fontSize: 12 }}>{(step.ms / 1000).toFixed(1)}s</Text>
+              )}
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
   );
 }

@@ -79,6 +79,8 @@ import com.hypaintelligence.hypaintelligence.emoji.EmojiGridAdapter
 import com.hypaintelligence.hypaintelligence.emoji.EmojiRepository
 import com.hypaintelligence.hypaintelligence.emoji.RecentEmojiStore
 import com.hypaintelligence.hypaintelligence.modes.HypaApi
+import com.hypaintelligence.hypaintelligence.modes.ask.AskHttpException
+import com.hypaintelligence.hypaintelligence.modes.ask.AskService
 import com.hypaintelligence.hypaintelligence.modes.dictionary.DictionaryDefinitionItem
 import com.hypaintelligence.hypaintelligence.modes.dictionary.DictionaryResultCardData
 import com.hypaintelligence.hypaintelligence.modes.dictionary.DictionaryService
@@ -136,6 +138,7 @@ private enum class ToolbarErrorSlot {
 
 private enum class FeatureMode {
   KEYBOARD,
+  ASK,
   TRANSLATE,
   TTS,
   TTS_LANGUAGE_PICKER,
@@ -155,6 +158,7 @@ private enum class FeatureMode {
 
 private enum class BoardKind {
   KEYS,
+  ASK,
   TOOLS,
   CLIPBOARD,
   TEXT_EDITING,
@@ -171,6 +175,7 @@ private enum class PickerSearchScope {
 }
 
 internal enum class KeyboardTool {
+  ASK,
   TRANSLATE,
   VOICE,
   SPEAK,
@@ -254,6 +259,17 @@ class HypaKeyboardPanelView(
     private const val RECENT_CATEGORY_TITLE = "Recent"
 
     private const val EMOJI_VARIANT_COLUMNS = 6 
+
+    private const val ASK_CONTEXT_LIMIT = 5000
+    private const val ASK_PREFS = "hypa_ask"
+    private val ASK_TOOL_LABELS = mapOf(
+      "translate_message" to ("Translating" to "Translated"),
+      "text_to_speech" to ("Preparing audio" to "Read aloud"),
+      "speech_to_text" to ("Transcribing" to "Transcribed"),
+      "look_up_term" to ("Looking up the word" to "Looked up"),
+      "extract_text_from_image" to ("Reading the image" to "Read image"),
+      "translate_and_speak" to ("Translating and speaking" to "Translated and spoke"),
+    )
   }
 
   private val translationService = TranslationService()
@@ -333,6 +349,8 @@ class HypaKeyboardPanelView(
   private var keyTypeface: Typeface? = null
   private var userName = ""
   private var apiToken = ""
+  private var assistantProvider = "meta"
+  private var assistantModel = "muse-spark-1.3"
   private var translationProvider = KeyboardLanguageCatalog.defaultProviderName
   private var translationModel = KeyboardLanguageCatalog.defaultTranslationModelName
   private var dictionaryProvider = KeyboardLanguageCatalog.defaultProviderName
@@ -750,6 +768,7 @@ class HypaKeyboardPanelView(
     draggingTool = null
     isClipboardEditMode = false
     stopTts()
+    resetAsk()
     sttCapturedText = ""
     sttLastCommitted = ""
     featureMode = preservedMode ?: FeatureMode.KEYBOARD
@@ -1186,6 +1205,8 @@ class HypaKeyboardPanelView(
       keyboardHeightPx = dp(keyboardHeightDp.roundToInt())
       userName = o.optString("name", "").trim()
       apiToken = o.optString("token", "").trim()
+      assistantProvider = o.optString("assistantProvider", "meta").trim().ifEmpty { "meta" }
+      assistantModel = o.optString("assistantModel", "muse-spark-1.3").trim().ifEmpty { "muse-spark-1.3" }
       keyboardLanguageCode = o.optString("languageId", "en").trim().ifEmpty { "en" }
       keyboardLanguageCode = keyboardLanguageForCode(keyboardLanguageCode).code
       contextEngine.setLanguage(keyboardLanguageCode)
@@ -1910,11 +1931,15 @@ class HypaKeyboardPanelView(
       append(toolbarErrors)
       append('|')
       append(lastTranslationState != null)
+      append('|')
+      append(askRevision)
     }
 
   private fun currentContentSignature(): String =
     buildString(96) {
       append(featureMode.name)
+      append('|')
+      append(if (askShowsDetails) askRevision else -1)
       append('|')
       append(actionEngine.keyboardBoardMode().name)
       append('|')
@@ -1999,12 +2024,14 @@ class HypaKeyboardPanelView(
   }
 
   private fun updatePickerSearchQuery(value: String) {
+    if (askCapturesKeys) return appendAskInput(value)
     if (!pickerSearchActive) return
     pickerSearchQuery += value
     renderTopArea()
   }
 
   private fun deletePickerSearchCharacter() {
+    if (askCapturesKeys) return deleteAskCharacter()
     if (!pickerSearchActive || pickerSearchQuery.isEmpty()) return
     pickerSearchQuery = pickerSearchQuery.dropLast(1)
     renderTopArea()
@@ -2549,6 +2576,7 @@ class HypaKeyboardPanelView(
     val kind =
       when {
         isToolsPanelOpen -> BoardKind.TOOLS
+        featureMode == FeatureMode.ASK && askShowsDetails -> BoardKind.ASK
         featureMode == FeatureMode.CLIPBOARD -> BoardKind.CLIPBOARD
         featureMode == FeatureMode.TEXT_EDITING -> BoardKind.TEXT_EDITING
         else -> BoardKind.KEYS
@@ -2556,6 +2584,7 @@ class HypaKeyboardPanelView(
     val board =
       when {
         kind == BoardKind.TOOLS -> buildToolsPanel()
+        kind == BoardKind.ASK -> buildAskPanel()
         kind == BoardKind.CLIPBOARD -> buildClipboardBoard()
         kind == BoardKind.TEXT_EDITING -> buildTextEditingBoard()
         else -> buildKeyBoard()
@@ -2673,7 +2702,7 @@ class HypaKeyboardPanelView(
   ) {
     var shouldRebuild = result.rebuild
     result.commitText?.let {
-      if (pickerSearchActive) {
+      if (capturesTyping) {
         updatePickerSearchQuery(it)
         return@let
       }
@@ -2703,6 +2732,7 @@ class HypaKeyboardPanelView(
       val bar = when {
         pickerSearchActive -> buildPickerSearchView()
         isAudioMenuOpen -> buildAudioMenuBar()
+        featureMode == FeatureMode.ASK -> buildAskHeader()
         featureMode == FeatureMode.TRANSLATE -> buildTranslateHeader()
         featureMode == FeatureMode.TTS -> buildTtsHeader()
         featureMode == FeatureMode.DICTIONARY -> buildDictionaryHeader()
@@ -2901,6 +2931,941 @@ class HypaKeyboardPanelView(
       )
     }
   }
+
+  // region Ask Hypa
+
+  private enum class AskOutcome { REPLACED, INSERTED, RESTORED, SHOWN, DRAFT_CHANGED, RECOVERED }
+
+  private data class AskStep(val id: String, val label: String, var ok: Boolean?)
+
+  private class AskTurn(
+    val requestId: String = java.util.UUID.randomUUID().toString(),
+    var request: String = "",
+    var activity: String = "Working…",
+    var fromCamera: Boolean = false,
+  ) {
+    var payload: JSONObject? = null
+    var sentSelection: String? = null
+    var sentDocument: String? = null
+    val steps = mutableListOf<AskStep>()
+    var text = ""
+    var summary: String? = null
+    var suggestions: List<String> = emptyList()
+    var speak = false
+    var audioUrl: String? = null
+    var chatId: String? = null
+    var outcome: AskOutcome? = null
+    var error: String? = null
+    var errorDetail: String? = null
+    var retryable = true
+  }
+
+  private val askService = AskService()
+  private var askInput = ""
+  private var askTurn: AskTurn? = null
+  @Volatile private var askGeneration = 0
+  private var askRevision = 0
+  private var askShowsDetails = false
+  private var askCopied = false
+  /** Earlier turns of this Ask session, sent so Hypa can follow up on its own question. */
+  private val askHistory = mutableListOf<Pair<String, String>>()
+  private var askReplySuggestions: List<String> = emptyList()
+  private var askRecorder: MediaRecorder? = null
+  private var askRecordFile: java.io.File? = null
+  private var askRecordStartMs = 0L
+  private var askTimerView: TextView? = null
+  private val askRecordTicker =
+    object : Runnable {
+      override fun run() {
+        if (askRecorder == null) return
+        askTimerView?.text = askElapsed()
+        if (System.currentTimeMillis() - askRecordStartMs >= MAX_STT_RECORD_MS) {
+          stopAskRecording(send = true)
+        } else {
+          mainHandler.postDelayed(this, 500L)
+        }
+      }
+    }
+
+  private val isAskRecording: Boolean get() = askRecorder != null
+  private val askCapturesKeys: Boolean
+    get() = featureMode == FeatureMode.ASK && !askShowsDetails && askTurn == null && !isAskRecording
+  private val capturesTyping: Boolean get() = pickerSearchActive || askCapturesKeys
+  private val askCanUndo: Boolean
+    get() = lastTranslationState != null &&
+      (askTurn?.outcome == AskOutcome.REPLACED || askTurn?.outcome == AskOutcome.INSERTED)
+  private val askWantsReply: Boolean
+    get() = askTurn?.let { it.outcome == AskOutcome.SHOWN && (it.suggestions.isNotEmpty() || it.text.endsWith("?")) } == true
+
+  private fun JSONObject.text(key: String): String? =
+    if (isNull(key)) null else optString(key).trim().takeIf { it.isNotEmpty() }
+
+  private fun refreshAsk() {
+    askRevision += 1
+    rebuild()
+  }
+
+  private fun toggleAsk() {
+    if (featureMode == FeatureMode.ASK) {
+      resetAsk()
+      featureMode = FeatureMode.KEYBOARD
+      return
+    }
+    resetAsk()
+    featureMode = FeatureMode.ASK
+  }
+
+  private fun closeAsk() {
+    resetAsk()
+    featureMode = FeatureMode.KEYBOARD
+    refreshAsk()
+  }
+
+  private fun resetAsk() {
+    askGeneration += 1
+    askService.cancel()
+    stopAskRecording(send = false)
+    if (askTurn?.speak == true) stopTts()
+    askTurn = null
+    askInput = ""
+    askShowsDetails = false
+    askCopied = false
+    askHistory.clear()
+    askReplySuggestions = emptyList()
+  }
+
+  private fun startNewAsk() {
+    resetAsk()
+    refreshAsk()
+  }
+
+  private fun appendAskInput(value: String) {
+    askInput += value
+    refreshAsk()
+  }
+
+  private fun deleteAskCharacter() {
+    if (askInput.isEmpty()) return
+    askInput = askInput.dropLast(1)
+    refreshAsk()
+  }
+
+  private fun currentAskDocument(input: InputConnection?): String =
+    input
+      ?.getExtractedText(ExtractedTextRequest().apply { hintMaxChars = MAX_EDITOR_TEXT_CHARS }, 0)
+      ?.text
+      ?.toString()
+      .orEmpty()
+
+  private fun sendAsk(audio: ByteArray? = null) {
+    val instruction = askInput.trim()
+    if (audio == null && instruction.isEmpty()) return
+    stopTts()
+    askGeneration += 1
+    val generation = askGeneration
+    val turn = AskTurn(request = instruction, activity = if (audio == null) "Working…" else "Transcribing…")
+    askTurn = turn
+    askReplySuggestions = emptyList()
+    askShowsDetails = false
+
+    val input = inputSupplier()
+    val selection = input?.getSelectedText(0)?.toString()?.takeIf { it.isNotEmpty() }
+    val document = currentAskDocument(input)
+    if ((selection ?: document).length > ASK_CONTEXT_LIMIT) {
+      turn.error = "Select a shorter section"
+      turn.errorDetail =
+        "Ask Hypa works on up to $ASK_CONTEXT_LIMIT characters. Select a shorter part of the text and try again."
+      turn.retryable = false
+      refreshAsk()
+      return
+    }
+    val context = JSONObject()
+    if (selection != null) {
+      context.put("selectedText", selection)
+      if (document.length <= ASK_CONTEXT_LIMIT) context.put("fieldText", document)
+    } else if (document.isNotEmpty()) {
+      context.put("fieldText", document)
+    }
+    val payload =
+      JSONObject()
+        .put("requestId", turn.requestId)
+        .put("input", instruction)
+        .put("provider", assistantProvider)
+        .put("model", assistantModel)
+        .put("surface", "keyboard")
+        .put("language", ttsLanguageName())
+    if (context.length() > 0) payload.put("context", context)
+    if (askHistory.isNotEmpty()) {
+      payload.put(
+        "history",
+        JSONArray(askHistory.takeLast(10).map { (role, content) -> JSONObject().put("role", role).put("content", content) }),
+      )
+    }
+    if (audio != null) {
+      val stt = KeyboardLanguageCatalog.resolveStt(sttProvider, sttModel)
+      payload
+        .put("audio", android.util.Base64.encodeToString(audio, android.util.Base64.NO_WRAP))
+        .put("audioType", "base64")
+        .put("asr", JSONObject().put("provider", stt.provider).put("model", stt.model))
+    }
+    turn.payload = payload
+    turn.sentSelection = selection
+    turn.sentDocument = document
+    refreshAsk()
+    streamAsk(generation)
+  }
+
+  private fun sendAskSuggestion(text: String) {
+    askInput = text
+    sendAsk()
+  }
+
+  private fun retryAsk() {
+    val turn = askTurn ?: return
+    val payload = turn.payload ?: return
+    if (!turn.retryable) return
+    askGeneration += 1
+    val fresh = AskTurn(request = turn.request, activity = if (payload.has("audio")) "Transcribing…" else "Working…")
+    fresh.payload = payload.put("requestId", fresh.requestId)
+    fresh.sentSelection = turn.sentSelection
+    fresh.sentDocument = turn.sentDocument
+    askTurn = fresh
+    refreshAsk()
+    streamAsk(askGeneration)
+  }
+
+  private fun replyToAsk() {
+    stopTts()
+    askReplySuggestions = askTurn?.suggestions.orEmpty()
+    askTurn = null
+    askInput = ""
+    askShowsDetails = false
+    askCopied = false
+    refreshAsk()
+  }
+
+  private fun streamAsk(generation: Int) {
+    val payload = askTurn?.payload ?: return
+    val token = apiToken.trim()
+    Thread {
+      var finished = false
+      val failure =
+        runCatching {
+          askService.stream(token, payload) { event ->
+            val type = event.optString("type")
+            if (type == "done" || type == "error") finished = true
+            mainHandler.post { handleAskEvent(event, generation) }
+          }
+        }.exceptionOrNull()
+      mainHandler.post {
+        if (generation != askGeneration) return@post
+        when {
+          failure is AskHttpException -> failAskHttp(generation, failure)
+          !finished -> recoverAsk(generation)
+        }
+      }
+    }.also { it.isDaemon = true }.start()
+  }
+
+  private fun handleAskEvent(event: JSONObject, generation: Int) {
+    if (generation != askGeneration) return
+    val turn = askTurn ?: return
+    event.text("chatId")?.let { turn.chatId = it }
+    when (event.optString("type")) {
+      "transcript" -> {
+        turn.activity = "Working…"
+        event.text("text")?.let { turn.request = it }
+        turn.steps += AskStep("transcript", "From your voice", true)
+      }
+      "tool_call" -> {
+        val name = event.text("name") ?: return
+        if (name == "finish") return
+        val labels = ASK_TOOL_LABELS[name] ?: ("Working" to "Used a tool")
+        turn.activity = "${labels.first}…"
+        turn.steps += AskStep(event.text("id") ?: name, labels.second, null)
+      }
+      "tool_result" -> {
+        val step = turn.steps.firstOrNull { it.id == event.text("id") } ?: return
+        step.ok = event.optBoolean("ok", false)
+      }
+      "audio" -> event.text("url")?.let { turn.audioUrl = it }
+      "done" -> {
+        turn.text = event.text("text").orEmpty()
+        turn.speak = event.optBoolean("speak", false)
+        turn.summary = event.text("summary")
+        turn.suggestions =
+          event.optJSONArray("suggestions")?.let { list ->
+            (0 until list.length()).map { list.optString(it).trim() }.filter { it.isNotEmpty() }
+          }.orEmpty()
+        event.text("audioUrl")?.let { turn.audioUrl = it }
+        if (turn.request.isNotEmpty() && turn.text.isNotEmpty()) {
+          askHistory += "user" to turn.request
+          askHistory += "assistant" to turn.text
+        }
+        completeAsk(event.text("action") ?: "show")
+        return
+      }
+      "error" -> {
+        val code = event.optString("code")
+        val limited = code == "rate_limited" || code == "budget_exceeded" || code == "insufficient_balance"
+        failAsk(generation, if (limited) "Request limit reached" else "Couldn't finish", event.text("message"))
+        return
+      }
+      else -> return
+    }
+    refreshAsk()
+  }
+
+  private fun completeAsk(action: String) {
+    val turn = askTurn ?: return
+    if (action == "show" || turn.text.isEmpty()) {
+      turn.outcome = AskOutcome.SHOWN
+      playAskAudio()
+      refreshAsk()
+      return
+    }
+    val input = inputSupplier()
+    val selection = input?.getSelectedText(0)?.toString()?.takeIf { it.isNotEmpty() }
+    if (input == null || selection != turn.sentSelection || currentAskDocument(input) != turn.sentDocument) {
+      turn.outcome = AskOutcome.DRAFT_CHANGED
+      playAskAudio()
+      refreshAsk()
+      return
+    }
+    applyAskText(turn.text, insertAtCursor = action == "insert")
+  }
+
+  private fun applyAskText(text: String, insertAtCursor: Boolean) {
+    val turn = askTurn ?: return
+    val input = inputSupplier() ?: return
+    translationMutationGeneration += 1
+    val extracted = input.getExtractedText(ExtractedTextRequest(), 0)
+    val document = extracted?.text?.toString().orEmpty()
+    val start = minOf(extracted?.selectionStart ?: -1, extracted?.selectionEnd ?: -1)
+    val end = maxOf(extracted?.selectionStart ?: -1, extracted?.selectionEnd ?: -1)
+    val hasSelection = start in 0 until end && end <= document.length
+    val state: LastTranslationState?
+    val applied: Boolean
+    if (insertAtCursor || hasSelection) {
+      state =
+        if (start >= 0 && end <= document.length) {
+          LastTranslationState(
+            originalText = document.substring(start, end),
+            translatedText = text,
+            translatedStart = start,
+            translatedEnd = start + text.length,
+            resultingDocument = document.substring(0, start) + text + document.substring(end),
+          )
+        } else {
+          null
+        }
+      applied = textEngine.commitText(input, text)
+      turn.outcome = if (hasSelection) AskOutcome.REPLACED else AskOutcome.INSERTED
+    } else {
+      state = captureTranslationState(input, text)
+      applied = applyTranslatedText(input, text)
+      turn.outcome = if (document.isBlank()) AskOutcome.INSERTED else AskOutcome.REPLACED
+    }
+    armTranslationUndo(if (applied) state else null)
+    playAskAudio()
+    refreshAsk()
+  }
+
+  private fun undoAsk() {
+    if (!askCanUndo) return
+    stopTts()
+    askTurn?.outcome = AskOutcome.RESTORED
+    undoTranslation()
+    refreshAsk()
+  }
+
+  private fun recoverAsk(generation: Int) {
+    val turn = askTurn ?: return
+    if (!turn.fromCamera) turn.activity = "Reconnecting…"
+    refreshAsk()
+    val token = apiToken.trim()
+    val requestId = turn.requestId
+    Thread {
+      val deadline = SystemClock.uptimeMillis() + 90_000L
+      var result: Pair<Int, JSONObject?> = 0 to null
+      while (generation == askGeneration) {
+        result = runCatching { askService.status(token, requestId) }.getOrDefault(0 to null)
+        val running = result.first == 200 && result.second?.optString("status") == "running"
+        if (!running || SystemClock.uptimeMillis() > deadline) break
+        Thread.sleep(1_500L)
+      }
+      mainHandler.post {
+        if (generation != askGeneration) return@post
+        val current = askTurn ?: return@post
+        val (code, body) = result
+        when {
+          code == 404 && current.fromCamera -> {
+            current.retryable = false
+            failAsk(generation, "No photo sent", null)
+          }
+          code == 200 && body?.optString("status") == "done" -> {
+            current.text = body.text("message").orEmpty()
+            current.outcome = AskOutcome.RECOVERED
+            refreshAsk()
+          }
+          code == 200 && body?.optString("status") == "failed" -> failAsk(generation, "Couldn't finish", null)
+          else -> failAsk(generation, "Couldn't connect", null)
+        }
+      }
+    }.also { it.isDaemon = true }.start()
+  }
+
+  private fun failAskHttp(generation: Int, error: AskHttpException) {
+    val title =
+      when (error.status) {
+        402, 429 -> "Request limit reached"
+        413 -> "Select a shorter section"
+        else -> KeyboardErrorCatalog.http(error.status)
+      }
+    failAsk(generation, title, error.message)
+  }
+
+  private fun failAsk(generation: Int, title: String, detail: String?) {
+    if (generation != askGeneration) return
+    val turn = askTurn ?: return
+    turn.error = title
+    turn.errorDetail = detail
+    refreshAsk()
+  }
+
+  private fun playAskAudio() {
+    val turn = askTurn ?: return
+    val url = turn.audioUrl ?: return
+    if (!turn.speak) return
+    ttsRequestId += 1
+    val requestId = ttsRequestId
+    isTtsLoading = true
+    refreshAsk()
+    val token = apiToken.trim()
+    Thread {
+      val bytes =
+        runCatching {
+          if (url.startsWith("data:")) {
+            android.util.Base64.decode(url.substringAfter(','), android.util.Base64.DEFAULT)
+          } else {
+            askService.download(token, url)
+          }
+        }.getOrNull()
+      mainHandler.post {
+        if (requestId != ttsRequestId) return@post
+        isTtsLoading = false
+        if (bytes == null || bytes.isEmpty()) {
+          refreshAsk()
+          return@post
+        }
+        runCatching {
+          val file = java.io.File.createTempFile("ask_", ".${sniffAudioExtension(bytes)}", context.cacheDir)
+          file.writeBytes(bytes)
+          retainSharedTtsAudio(file)
+          replayTtsClip()
+        }.onFailure { Log.w(TAG, "Ask audio playback failed", it) }
+        refreshAsk()
+      }
+    }.also { it.isDaemon = true }.start()
+  }
+
+  private fun copyAskResult() {
+    val text = askTurn?.text?.takeIf { it.isNotEmpty() } ?: return
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+    clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Hypa", text))
+    askCopied = true
+    refreshAsk()
+  }
+
+  private fun openAskInHypa() {
+    val path = askTurn?.chatId?.let { "hypaintelligence://chat/$it" } ?: "hypaintelligence://chat"
+    startHostApp(
+      android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(path))
+        .setPackage(context.packageName)
+        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+    )
+  }
+
+  private fun startAskRecording() {
+    if (isAskRecording) return
+    if (!hasMicPermission()) {
+      askTurn = AskTurn(activity = "").apply {
+        error = KeyboardErrorCatalog.micNeeded
+        errorDetail = "Allow microphone access for Hypa, then try again."
+        retryable = false
+      }
+      requestMicPermission()
+      refreshAsk()
+      return
+    }
+    stopTts()
+    val file = runCatching { java.io.File.createTempFile("hypa_ask_", ".m4a", context.cacheDir) }.getOrNull() ?: return
+    val recorder =
+      runCatching {
+        val r =
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) MediaRecorder(context)
+          else @Suppress("DEPRECATION") MediaRecorder()
+        r.setAudioSource(MediaRecorder.AudioSource.MIC)
+        r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+        r.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+        r.setOutputFile(file.absolutePath)
+        r.prepare()
+        r.start()
+        r
+      }.onFailure { Log.w(TAG, "Ask recording failed", it) }.getOrNull()
+    if (recorder == null) {
+      runCatching { file.delete() }
+      return
+    }
+    askRecorder = recorder
+    askRecordFile = file
+    askRecordStartMs = System.currentTimeMillis()
+    refreshAsk()
+    mainHandler.postDelayed(askRecordTicker, 500L)
+  }
+
+  private fun stopAskRecording(send: Boolean) {
+    val recorder = askRecorder ?: return
+    val file = askRecordFile
+    askRecorder = null
+    askRecordFile = null
+    askTimerView = null
+    mainHandler.removeCallbacks(askRecordTicker)
+    val stopped = runCatching { recorder.stop() }.isSuccess
+    runCatching { recorder.release() }
+    val bytes = if (stopped) runCatching { file?.readBytes() }.getOrNull() else null
+    runCatching { file?.delete() }
+    if (!send) return
+    if (bytes == null || bytes.isEmpty()) {
+      refreshAsk()
+      return
+    }
+    sendAsk(audio = bytes)
+  }
+
+  private fun askElapsed(): String {
+    val seconds = ((System.currentTimeMillis() - askRecordStartMs) / 1000).toInt()
+    return "%d:%02d".format(seconds / 60, seconds % 60)
+  }
+
+  /** Android keyboards can't take photos, so the Hypa app does and runs the request under this id. */
+  private fun openAskCamera() {
+    val requestId = java.util.UUID.randomUUID().toString()
+    context.getSharedPreferences(ASK_PREFS, Context.MODE_PRIVATE).edit()
+      .putString("cameraId", requestId)
+      .putLong("cameraAt", System.currentTimeMillis())
+      .apply()
+    val uri =
+      android.net.Uri.Builder()
+        .scheme("hypaintelligence")
+        .authority("ask-camera")
+        .appendQueryParameter("requestId", requestId)
+        .appendQueryParameter("input", askInput)
+        .appendQueryParameter("language", ttsLanguageName())
+        .appendQueryParameter("provider", assistantProvider)
+        .appendQueryParameter("model", assistantModel)
+        .build()
+    startHostApp(
+      android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+        .setPackage(context.packageName)
+        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+    )
+  }
+
+  /** Called when the keyboard opens in another app: picks up a photo request sent from the Hypa app. */
+  fun resumeAskCamera() {
+    val prefs = context.getSharedPreferences(ASK_PREFS, Context.MODE_PRIVATE)
+    val requestId = prefs.getString("cameraId", null) ?: return
+    val startedAt = prefs.getLong("cameraAt", 0L)
+    prefs.edit().remove("cameraId").remove("cameraAt").apply()
+    if (System.currentTimeMillis() - startedAt > 30 * 60_000L) return
+    resetAsk()
+    featureMode = FeatureMode.ASK
+    askTurn = AskTurn(requestId = requestId, request = "Photo", activity = "Reading your photo…", fromCamera = true)
+    recoverAsk(askGeneration)
+  }
+
+  private fun askTextSize(): Float = (fontSize - 2f).coerceAtLeast(11f)
+
+  private fun askLabel(value: String, fg: Int, alphaValue: Float = 1f): TextView =
+    TextView(context).apply {
+      text = value
+      setTextColor(fg)
+      alpha = alphaValue
+      textSize = askTextSize()
+      typeface = keyTypeface
+      maxLines = 1
+      ellipsize = TextUtils.TruncateAt.END
+      gravity = Gravity.CENTER_VERTICAL
+      layoutParams = LayoutParams(0, LayoutParams.MATCH_PARENT, 1f)
+    }
+
+  private fun askAction(value: String, fg: Int, onClick: () -> Unit): TextView =
+    TextView(context).apply {
+      text = value
+      setTextColor(fg)
+      textSize = askTextSize()
+      typeface = Typeface.create(keyTypeface, Typeface.BOLD)
+      gravity = Gravity.CENTER
+      setPadding(dp(6), 0, dp(6), 0)
+      layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT)
+      setOnTouchListener(TapTouch { onClick() })
+    }
+
+  private fun askGlyph(iconRes: Int, tint: Int): ImageView =
+    ImageView(context).apply {
+      setImageResource(iconRes)
+      setColorFilter(tint)
+      layoutParams = LayoutParams(dp(14), dp(14)).apply { marginEnd = dp(8) }
+    }
+
+  private fun askSpinner(tint: Int): ProgressBar =
+    ProgressBar(context, null, android.R.attr.progressBarStyleSmall).apply {
+      isIndeterminate = true
+      indeterminateTintList = android.content.res.ColorStateList.valueOf(tint)
+      layoutParams = LayoutParams(dp(16), dp(16)).apply { marginEnd = dp(8) }
+    }
+
+  private fun askWave(tint: Int): AudioWaveformView =
+    AudioWaveformView(context).apply {
+      barColor = tint
+      setDecorative(true)
+      layoutParams = LayoutParams(dp(36), dp(18)).apply { marginEnd = dp(8) }
+    }
+
+  private fun askCircle(iconRes: Int, description: String, bg: Int, tint: Int, onClick: () -> Unit): FrameLayout =
+    toolbarIcon(iconRes = iconRes, contentDescriptionText = description, bg = bg, tint = tint, iconSizeDp = 15, onClick = onClick)
+
+  private fun askInfoButton(tint: Int): FrameLayout =
+    askCircle(R.drawable.ic_ask_info, "Details", Color.TRANSPARENT, tint) {
+      askShowsDetails = true
+      refreshAsk()
+    }
+
+  private fun askSuggestionStrip(suggestions: List<String>, bg: Int, fg: Int): HorizontalScrollView =
+    HorizontalScrollView(context).apply {
+      isHorizontalScrollBarEnabled = false
+      addView(
+        LinearLayout(context).apply {
+          orientation = HORIZONTAL
+          gravity = Gravity.CENTER_VERTICAL
+          suggestions.forEach { suggestion ->
+            addView(
+              TextView(context).apply {
+                text = suggestion
+                setTextColor(fg)
+                textSize = askTextSize()
+                typeface = keyTypeface
+                maxLines = 1
+                gravity = Gravity.CENTER
+                background = roundedBg(bg, 999f)
+                setPadding(dp(12), dp(5), dp(12), dp(5))
+                layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(6) }
+                setOnTouchListener(TapTouch(allowParentScroll = true) { sendAskSuggestion(suggestion) })
+              },
+            )
+          }
+        },
+      )
+    }
+
+  private fun buildAskHeader(): LinearLayout {
+    val keyBg = color("key", "#515151")
+    val label = color("label", "#FFFFFF")
+    val pill = color("pill", "#FFFFFF")
+    val pillLabel = color("pillLabel", "#111111")
+    val row =
+      LinearLayout(context).apply {
+        orientation = HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(4), dp(2), dp(4), dp(2))
+      }
+    row.addView(askCircle(R.drawable.ic_audio_close, "Close Ask Hypa", Color.TRANSPARENT, label) { closeAsk() })
+    val turn = askTurn
+
+    if (askShowsDetails) {
+      row.addView(askLabel("Ask Hypa", label))
+      if (turn?.text?.isNotEmpty() == true) row.addView(askAction(if (askCopied) "Copied" else "Copy", label) { copyAskResult() })
+      row.addView(
+        askCircle(R.drawable.ic_audio_back, "Show keyboard", Color.TRANSPARENT, label) {
+          askShowsDetails = false
+          refreshAsk()
+        },
+      )
+      return row
+    }
+
+    if (isAskRecording) {
+      row.addView(askCircle(R.drawable.ic_ask_camera, "Take photo", keyBg, label) { openAskCamera() }.apply { alpha = 0.4f })
+      row.addView(
+        LinearLayout(context).apply {
+          orientation = HORIZONTAL
+          gravity = Gravity.CENTER_VERTICAL
+          background = roundedBg(keyBg, 999f)
+          setPadding(dp(12), 0, dp(12), 0)
+          layoutParams = LayoutParams(0, dp(30), 1f).apply { marginEnd = dp(6) }
+          addView(askWave(label))
+          addView(askLabel("Listening…", label))
+          addView(
+            TextView(context).apply {
+              text = askElapsed()
+              setTextColor(label)
+              alpha = 0.6f
+              textSize = askTextSize()
+              typeface = keyTypeface
+              askTimerView = this
+            },
+          )
+        },
+      )
+      row.addView(askCircle(R.drawable.ic_ask_stop, "Stop and send", keyBg, label) { stopAskRecording(send = true) })
+      return row
+    }
+
+    if (turn == null) {
+      row.addView(askCircle(R.drawable.ic_ask_camera, "Take photo", keyBg, label) { openAskCamera() })
+      val field =
+        FrameLayout(context).apply {
+          background = roundedBg(keyBg, 999f)
+          layoutParams = LayoutParams(0, dp(30), 1f).apply { marginEnd = dp(6) }
+        }
+      if (askInput.isEmpty() && askReplySuggestions.isNotEmpty()) {
+        field.background = null
+        field.addView(askSuggestionStrip(askReplySuggestions, keyBg, label))
+      } else {
+        field.addView(
+          LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), 0, dp(12), 0)
+            val text =
+              TextView(context).apply {
+                textSize = askTextSize()
+                typeface = keyTypeface
+                maxLines = 1
+                if (askInput.isEmpty()) {
+                  text = if (askHistory.isEmpty()) "Tell Hypa what to do…" else "Reply to Hypa…"
+                  setTextColor(Color.parseColor("#A1A1AA"))
+                  ellipsize = TextUtils.TruncateAt.END
+                } else {
+                  text = askInput
+                  setTextColor(label)
+                  ellipsize = TextUtils.TruncateAt.START
+                }
+              }
+            if (askInput.isEmpty()) {
+              addView(blinkingCaret(label))
+              addView(text)
+            } else {
+              // Shrinks to fit so the caret stays right after the text.
+              addView(text, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, 1f))
+              addView(blinkingCaret(label))
+            }
+          },
+          FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.MATCH_PARENT),
+        )
+      }
+      row.addView(field)
+      row.addView(askCircle(R.drawable.ic_ask_mic, "Speak instruction", keyBg, label) { startAskRecording() })
+      val ready = askInput.isNotBlank()
+      row.addView(
+        askCircle(R.drawable.ic_ask_arrow_up, "Send", if (ready) pill else keyBg, if (ready) pillLabel else label) {
+          sendAsk()
+        }.apply { alpha = if (ready) 1f else 0.5f },
+      )
+      return row
+    }
+
+    turn.error?.let { error ->
+      row.addView(askGlyph(R.drawable.ic_ask_info, label))
+      row.addView(askLabel(error, label))
+      if (turn.retryable && turn.payload != null) row.addView(askAction("Retry", label) { retryAsk() })
+      row.addView(askInfoButton(label))
+      return row
+    }
+
+    val outcome = turn.outcome
+    if (outcome == null) {
+      row.addView(askSpinner(label))
+      row.addView(askLabel(turn.activity, label))
+      row.addView(askInfoButton(label))
+      return row
+    }
+
+    val undo = if (askCanUndo) listOf(askAction("Undo", label) { undoAsk() }) else emptyList()
+    val edited = outcome == AskOutcome.REPLACED || outcome == AskOutcome.INSERTED
+    val doneTitle = if (outcome == AskOutcome.INSERTED) "Inserted" else "Done"
+    val firstLine = turn.text.lineSequence().firstOrNull().orEmpty()
+    val (lead, title, actions) =
+      when {
+        turn.speak && isTtsLoading -> Triple(askSpinner(label), "Preparing audio…", undo)
+        turn.speak && isTtsPlaying ->
+          Triple(
+            askWave(label),
+            if (edited) "$doneTitle · playing…" else "Reading aloud…",
+            undo + askCircle(R.drawable.ic_ask_stop, "Stop", Color.TRANSPARENT, label) { stopTts(); refreshAsk() },
+          )
+        turn.speak && hasShareableTts() && (edited || outcome == AskOutcome.SHOWN) ->
+          Triple(
+            askGlyph(if (edited) R.drawable.ic_key_check else R.drawable.ic_mode_audio, label),
+            if (edited) doneTitle else firstLine,
+            undo + askCircle(R.drawable.ic_audio_play, "Play", Color.TRANSPARENT, label) { resumeTts(); refreshAsk() },
+          )
+        outcome == AskOutcome.REPLACED || outcome == AskOutcome.INSERTED ->
+          Triple(askGlyph(R.drawable.ic_key_check, label), doneTitle, undo)
+        outcome == AskOutcome.RESTORED ->
+          Triple(askGlyph(R.drawable.ic_audio_undo, label), "Original restored", listOf(askAction("Ask", label) { startNewAsk() }))
+        outcome == AskOutcome.SHOWN ->
+          Triple(
+            null,
+            firstLine,
+            listOf(
+              if (askWantsReply) askAction("Reply", label) { replyToAsk() }
+              else askAction(if (askCopied) "Copied" else "Copy", label) { copyAskResult() },
+            ),
+          )
+        outcome == AskOutcome.DRAFT_CHANGED ->
+          Triple(null, "Draft changed · result saved", listOf(askAction(if (askCopied) "Copied" else "Copy", label) { copyAskResult() }))
+        else ->
+          Triple(
+            null,
+            firstLine.ifEmpty { "Your reply is ready" },
+            listOf(askAction("Insert", label) { applyAskText(turn.text, insertAtCursor = true) }),
+          )
+      }
+    lead?.let { row.addView(it) }
+    row.addView(askLabel(title, label))
+    actions.forEach { row.addView(it) }
+    row.addView(askInfoButton(label))
+    return row
+  }
+
+  private fun buildAskPanel(): View {
+    val keyBg = color("key", "#515151")
+    val label = color("label", "#FFFFFF")
+    val turn = askTurn
+    val stack =
+      LinearLayout(context).apply {
+        orientation = VERTICAL
+        setPadding(dp(14), dp(8), dp(14), dp(12))
+      }
+    fun caption(value: String) =
+      stack.addView(
+        TextView(context).apply {
+          text = value
+          letterSpacing = 0.1f
+          setTextColor(label)
+          alpha = 0.55f
+          textSize = (fontSize - 5f).coerceAtLeast(10f)
+          typeface = keyTypeface
+          setPadding(0, dp(4), 0, dp(2))
+        },
+      )
+    fun body(value: String, sizeOffset: Float, alphaValue: Float = 1f, maxLinesValue: Int = Int.MAX_VALUE) =
+      stack.addView(
+        TextView(context).apply {
+          text = value
+          setTextColor(label)
+          alpha = alphaValue
+          textSize = (fontSize + sizeOffset).coerceAtLeast(11f)
+          typeface = keyTypeface
+          maxLines = maxLinesValue
+          ellipsize = TextUtils.TruncateAt.END
+          setTextIsSelectable(true)
+        },
+      )
+    fun gap(heightDp: Int) = stack.addView(View(context), LayoutParams(1, dp(heightDp)))
+
+    turn?.request?.takeIf { it.isNotEmpty() }?.let {
+      caption("YOU ASKED")
+      body(it, -2f, 0.75f, 2)
+      gap(12)
+    }
+    caption(if (turn?.error != null) "DETAILS" else if (turn?.outcome == null) "WORKING" else "ANSWER")
+    body(
+      when {
+        turn?.error != null -> listOfNotNull(turn.error, turn.errorDetail).joinToString("\n\n")
+        turn?.text?.isNotEmpty() == true -> turn.text
+        else -> turn?.activity ?: "Tell Hypa what to do."
+      },
+      1f,
+    )
+    if (turn?.error == null) turn?.summary?.let { body(it, -2f, 0.55f) }
+    if (askWantsReply && turn?.suggestions?.isNotEmpty() == true) {
+      gap(10)
+      stack.addView(askSuggestionStrip(turn.suggestions, keyBg, label))
+    }
+
+    // What actually happened, in plain words: tools that ran, where the text went, audio.
+    val marks =
+      turn?.steps.orEmpty().map { "${if (it.ok == null) "…" else if (it.ok == true) "✓" else "✕"} ${it.label}" }.toMutableList()
+    when (turn?.outcome) {
+      AskOutcome.REPLACED -> marks += if (turn.sentSelection != null) "✓ Replaced your selection" else "✓ Replaced your text"
+      AskOutcome.INSERTED -> marks += "✓ Added to your text"
+      AskOutcome.RESTORED -> marks += "↺ Original restored"
+      AskOutcome.DRAFT_CHANGED -> marks += "! Not applied, your text changed"
+      else -> Unit
+    }
+    if (turn?.speak == true && turn.outcome != null) {
+      marks += if (turn.audioUrl != null) "✓ Read aloud" else "✕ Couldn't read aloud"
+    }
+    if (marks.isNotEmpty()) {
+      gap(12)
+      stack.addView(
+        HorizontalScrollView(context).apply {
+          isHorizontalScrollBarEnabled = false
+          addView(
+            LinearLayout(context).apply {
+              orientation = HORIZONTAL
+              marks.forEach { mark ->
+                addView(
+                  TextView(context).apply {
+                    text = mark
+                    setTextColor(label)
+                    textSize = (fontSize - 4f).coerceAtLeast(10f)
+                    typeface = keyTypeface
+                    background = roundedBg(keyBg, 10f)
+                    setPadding(dp(10), dp(5), dp(10), dp(5))
+                    layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(6) }
+                  },
+                )
+              }
+            },
+          )
+        },
+      )
+    }
+
+    gap(12)
+    stack.addView(
+      View(context).apply {
+        setBackgroundColor(label)
+        alpha = 0.12f
+      },
+      LayoutParams(LayoutParams.MATCH_PARENT, 1),
+    )
+    stack.addView(
+      LinearLayout(context).apply {
+        orientation = HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, dp(40))
+        if (turn?.text?.isNotEmpty() == true) addView(askAction(if (askCopied) "Copied" else "Copy", label) { copyAskResult() })
+        if (askWantsReply) addView(askAction("Reply", label) { replyToAsk() })
+        if (turn?.speak == true && (hasShareableTts() || turn.audioUrl != null)) {
+          addView(askAction("▷ Play", label) { if (hasShareableTts()) resumeTts() else playAskAudio() })
+        }
+        addView(View(context), LayoutParams(0, 1, 1f))
+        addView(askAction("Open in Hypa ↗", label) { openAskInHypa() })
+      },
+    )
+
+    return ScrollView(context).apply {
+      isVerticalScrollBarEnabled = false
+      addView(stack)
+    }
+  }
+
+  // endregion
 
   private fun buildTranslateHeader(): LinearLayout {
     val keyBg = color("key", "#515151")
@@ -3335,6 +4300,14 @@ class HypaKeyboardPanelView(
 
   private fun toolbarIconFor(tool: KeyboardTool, bg: Int, accent: Int): View =
     when (tool) {
+      KeyboardTool.ASK ->
+        toolbarIcon(
+          iconRes = R.drawable.ic_mode_ask,
+          contentDescriptionText = "Ask Hypa",
+          bg = if (featureMode == FeatureMode.ASK) accent else bg,
+          tint = color("label", "#EAEAEE"),
+          iconSizeDp = 16,
+        ) { activateTool(KeyboardTool.ASK) }
       KeyboardTool.TRANSLATE -> modeToggleIcon(bg, accent)
       KeyboardTool.VOICE -> sttMicIcon()
       KeyboardTool.SPEAK -> ttsIcon()
@@ -4749,7 +5722,11 @@ class HypaKeyboardPanelView(
     }
 
   private fun performRenderAction(key: KeyboardRenderKey) {
-    if (pickerSearchActive) {
+    // Ask lets board switches (123, ABC, #+=) through; picker search swallows them.
+    val boardSwitch = key.action == KeyboardRenderAction.OPEN_SYMBOLS ||
+      key.action == KeyboardRenderAction.TOGGLE_SYMBOL_PAGE ||
+      key.action == KeyboardRenderAction.RETURN_TO_ALPHABET
+    if (capturesTyping && !(askCapturesKeys && boardSwitch)) {
       when (key.action) {
         KeyboardRenderAction.COMMIT_SYMBOL -> updatePickerSearchQuery(key.value.orEmpty())
         KeyboardRenderAction.COMMIT_COMMA -> updatePickerSearchQuery(",")
@@ -4760,7 +5737,7 @@ class HypaKeyboardPanelView(
         else -> Unit
       }
       if (key.action == KeyboardRenderAction.SEARCH) {
-        closePickerSearch()
+        if (askCapturesKeys) sendAsk() else closePickerSearch()
       }
       return
     }
@@ -4943,7 +5920,7 @@ class HypaKeyboardPanelView(
               previewText = display,
               restoresShiftOnCancel = true,
             ) {
-              if (pickerSearchActive) {
+              if (capturesTyping) {
                 updatePickerSearchQuery(if (typingEngine.isUppercaseActive()) upper else lower)
               } else {
                 applyActionResult(actionEngine.commitLetter(lower, upper))
@@ -4963,7 +5940,7 @@ class HypaKeyboardPanelView(
       display,
       restoresShiftOnCancel = true,
     ) {
-      if (pickerSearchActive) {
+      if (capturesTyping) {
         updatePickerSearchQuery(if (typingEngine.isUppercaseActive()) upper else lower)
       } else {
         applyActionResult(actionEngine.commitLetter(lower, upper))
@@ -4977,7 +5954,7 @@ class HypaKeyboardPanelView(
   private fun symbolKey(symbol: String, weight: Float, keyBg: Int, labelColor: Int): TextView {
     val alternates = layoutEngine.punctuationAlternates(symbol)
     return touchKey(symbol, weight, keyBg, labelColor, alternates, symbol) {
-      if (pickerSearchActive) {
+      if (capturesTyping) {
         updatePickerSearchQuery(symbol)
       } else {
         applyActionResult(actionEngine.commitText(symbol))
@@ -5728,7 +6705,7 @@ class HypaKeyboardPanelView(
     }
 
     private fun commitSpace() {
-      if (pickerSearchActive) {
+      if (capturesTyping) {
         updatePickerSearchQuery(" ")
         return
       }
@@ -5989,7 +6966,7 @@ class HypaKeyboardPanelView(
     }
 
     private fun deleteOnce() {
-      if (pickerSearchActive) {
+      if (capturesTyping) {
         deletePickerSearchCharacter()
         return
       }
@@ -6300,6 +7277,7 @@ class HypaKeyboardPanelView(
 
   private fun toolIconRes(tool: KeyboardTool): Int =
     when (tool) {
+      KeyboardTool.ASK -> R.drawable.ic_mode_ask
       KeyboardTool.TRANSLATE -> R.drawable.ic_mode_translate
       KeyboardTool.VOICE -> R.drawable.ic_audio_mic
       KeyboardTool.SPEAK -> R.drawable.ic_mode_audio
@@ -6313,6 +7291,7 @@ class HypaKeyboardPanelView(
 
   private fun toolLabel(tool: KeyboardTool): String =
     when (tool) {
+      KeyboardTool.ASK -> "Ask Hypa"
       KeyboardTool.TRANSLATE -> "Translate"
       KeyboardTool.VOICE -> "Transcribe"
       KeyboardTool.SPEAK -> "Speak"
@@ -6326,6 +7305,7 @@ class HypaKeyboardPanelView(
 
   private fun isToolActive(tool: KeyboardTool): Boolean =
     when (tool) {
+      KeyboardTool.ASK -> featureMode == FeatureMode.ASK
       KeyboardTool.TRANSLATE -> featureMode == FeatureMode.TRANSLATE
       KeyboardTool.VOICE -> isSttListening
       KeyboardTool.SPEAK -> hasActiveTtsState()
@@ -6340,6 +7320,7 @@ class HypaKeyboardPanelView(
   private fun activateTool(tool: KeyboardTool) {
     isToolsPanelOpen = false
     when (tool) {
+      KeyboardTool.ASK -> toggleAsk()
       KeyboardTool.TRANSLATE ->
         featureMode =
           if (featureMode == FeatureMode.TRANSLATE) FeatureMode.KEYBOARD else FeatureMode.TRANSLATE
@@ -10257,7 +11238,7 @@ class HypaKeyboardPanelView(
   }
 
   private fun refreshTtsUi() {
-    if (featureMode == FeatureMode.DICTIONARY_RESULT || featureMode == FeatureMode.TTS) {
+    if (featureMode == FeatureMode.DICTIONARY_RESULT || featureMode == FeatureMode.TTS || featureMode == FeatureMode.ASK) {
       rebuild()
     } else {
       updateTtsButtonState()
