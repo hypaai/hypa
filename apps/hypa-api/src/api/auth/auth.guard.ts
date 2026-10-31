@@ -146,7 +146,8 @@ export class AuthGuard implements CanActivate {
         pathOnly === '/v2/agent') ||
       // Anonymous agent turns can be picked up by their unguessable requestId.
       // Media links carry their own signature and expiry.
-      (request.method === 'GET' && pathOnly.startsWith('/v2/agent/'));
+      (request.method === 'GET' && pathOnly.startsWith('/v2/agent/')) ||
+      (request.method === 'GET' && pathOnly === '/v2/translate/lens');
 
     if (isAnonymousAllowed) {
       // If token is provided, attempt to authenticate and attach user

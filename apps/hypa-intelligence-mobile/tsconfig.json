@@ -21,6 +21,9 @@
       ],
       "hypa-keyboard-storage/*": [
         "./n-modules/hypa-keyboard-storage/*"
+      ],
+      "hypa-lens-ocr": [
+        "./n-modules/hypa-lens-ocr"
       ]
     },
     "allowImportingTsExtensions": true

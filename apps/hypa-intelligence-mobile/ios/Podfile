@@ -62,11 +62,17 @@ target 'HypaIntelligence' do
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
 
-    # ExpoModulesJSI's podspec sets no C++ standard, so it falls back to gnu++14 and jsi.h fails to compile.
+    # Xcode 27 no longer accepts deployment targets below iOS 15, while some
+    # dependency podspecs still declare older targets for their resource bundles.
     installer.pods_project.targets.each do |target|
-      next unless target.name == 'ExpoModulesJSI'
       target.build_configurations.each do |config|
-        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
+
+        # ExpoModulesJSI's podspec sets no C++ standard, so it falls back to
+        # gnu++14 and jsi.h fails to compile.
+        if target.name == 'ExpoModulesJSI'
+          config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++20'
+        end
       end
     end
   end

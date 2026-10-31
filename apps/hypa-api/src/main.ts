@@ -52,8 +52,8 @@ async function bootstrap() {
   app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
   app.use('/audio', express.static(path.join(__dirname, '/public/audio')));
   app.enableShutdownHooks();
-  await app.listen(PORT, () => {
-    console.log(`Server is running on port ${process.env.PORT ?? 5678}`);
+  await app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on http://0.0.0.0:${process.env.PORT ?? 5678}`);
   });
 }
 bootstrap();

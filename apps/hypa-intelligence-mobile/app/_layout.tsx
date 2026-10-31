@@ -80,6 +80,10 @@ export default function RootLayout() {
                     <Stack screenOptions={{ headerShown: false }}>
                       <Stack.Screen name="(entry)" options={{ headerShown: false }} />
                       <Stack.Screen name="refer" options={{ headerShown: false }} />
+                      <Stack.Screen
+                        name="lens"
+                        options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'fade' }}
+                      />
                       <Stack.Screen name="+not-found" />
                     </Stack>
                   </ToastProvider>

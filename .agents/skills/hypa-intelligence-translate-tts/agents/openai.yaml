@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hypa Intelligence Translate TTS"
+  short_description: "Maintain Translate screen TTS behavior"
+  default_prompt: "Use $hypa-intelligence-translate-tts to review or change TTS behavior in the Hypa Intelligence Translate screen."

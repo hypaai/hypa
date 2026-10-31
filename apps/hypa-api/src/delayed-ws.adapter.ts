@@ -2,6 +2,7 @@ import http from 'http';
 import { INestApplicationContext } from '@nestjs/common';
 import { WsAdapter } from '@nestjs/platform-ws';
 import { Server as WsServer } from 'ws';
+import { isLensSocketRequest } from './api/translate/lens/lens-socket.service';
 
 export interface WsAuthResult {
   userId: string;
@@ -101,6 +102,7 @@ export class DelayedWsAdapter extends WsAdapter {
     };
 
     const upgradeHandler: UpgradeHandler = (req, socket, head) => {
+      if (isLensSocketRequest(req)) return;
       void prepareUpgrade(req, socket, head).catch((error: unknown) => {
         console.error('[WS] Upgrade failed:', error);
         socket.destroy();

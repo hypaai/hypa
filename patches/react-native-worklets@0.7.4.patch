@@ -1,0 +1,18 @@
+diff --git a/apple/worklets/apple/WorkletsMessageThread.h b/apple/worklets/apple/WorkletsMessageThread.h
+index 822312c391682a54c076dab4e19bd1807de6906d..83e9e015d8057d6d0b62e4c9b63f3c5675764ee8 100644
+--- a/apple/worklets/apple/WorkletsMessageThread.h
++++ b/apple/worklets/apple/WorkletsMessageThread.h
+@@ -1,7 +1,13 @@
+ #pragma once
+ 
+ #import <Foundation/Foundation.h>
++// Prebuilt React Native core ships this header under React_Core/, and a
++// module import of RNWorklets (VisionCameraWorklets) cannot see React/.
++#if __has_include(<React/RCTMessageThread.h>)
+ #import <React/RCTMessageThread.h>
++#else
++#import <React_Core/RCTMessageThread.h>
++#endif
+ 
+ namespace facebook {
+ namespace react {

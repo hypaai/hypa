@@ -1,0 +1,24 @@
+{
+  "$schema": "https://nitro.margelo.com/nitro.schema.json",
+  "cxxNamespace": ["hypalensocr"],
+  "ios": {
+    "iosModuleName": "HypaLensOcr"
+  },
+  "android": {
+    "androidNamespace": ["hypalensocr"],
+    "androidCxxLibName": "HypaLensOcr"
+  },
+  "autolinking": {
+    "LensOcrFactory": {
+      "ios": {
+        "language": "swift",
+        "implementationClassName": "HybridLensOcrFactory"
+      },
+      "android": {
+        "language": "kotlin",
+        "implementationClassName": "HybridLensOcrFactory"
+      }
+    }
+  },
+  "ignorePaths": ["**/node_modules"]
+}
