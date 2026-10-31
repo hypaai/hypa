@@ -11,6 +11,7 @@ export const finishSchema = z.object({
   text: z.string(),
   speak: z.boolean(),
   summary: z.string().optional(),
+  suggestions: z.array(z.string()).max(4).optional(),
 });
 
 export type FinishAction = z.infer<typeof finishSchema>;
@@ -63,6 +64,7 @@ export type AgentEvent =
       text: string;
       speak: boolean;
       summary?: string;
+      suggestions?: string[];
       usage: Usage;
       cost?: number;
       audioUrl?: string;
@@ -351,6 +353,7 @@ export async function* runAgentLoop(input: {
         text: action.text,
         speak: action.speak,
         ...(action.summary ? { summary: action.summary } : {}),
+        ...(action.suggestions?.length ? { suggestions: action.suggestions } : {}),
         usage,
       };
       return;

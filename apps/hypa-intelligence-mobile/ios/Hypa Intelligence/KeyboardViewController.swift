@@ -2334,6 +2334,7 @@ class KeyboardViewController: UIInputViewController {
     var steps: [AskStep] = []
     var text = ""
     var summary: String?
+    var suggestions: [String] = []
     var speak = false
     var audioURL: String?
     var chatId: String?
@@ -2364,6 +2365,9 @@ class KeyboardViewController: UIInputViewController {
   private var askMicUnavailable = false
   private var askShowsDetails = false
   private var askCopied = false
+  /// Earlier turns of this Ask session, sent so Hypa can follow up on its own question.
+  private var askHistory: [[String: String]] = []
+  private var askReplySuggestions: [String] = []
 
   private var askNeedsFullAccess: Bool { !hasFullAccess }
 
@@ -2416,6 +2420,28 @@ class KeyboardViewController: UIInputViewController {
     askInput = ""
     askShowsDetails = false
     askCopied = false
+    askHistory = []
+    askReplySuggestions = []
+  }
+
+  private var askWantsReply: Bool {
+    guard let turn = askTurn, turn.outcome == .shown else { return false }
+    return !turn.suggestions.isEmpty || turn.text.hasSuffix("?")
+  }
+
+  private func replyToAsk() {
+    stopTts()
+    askReplySuggestions = askTurn?.suggestions ?? []
+    askTurn = nil
+    askInput = ""
+    askShowsDetails = false
+    askCopied = false
+    rebuildKeyboard()
+  }
+
+  private func sendAskSuggestion(_ text: String) {
+    askInput = text
+    sendAsk()
   }
 
   private func refreshAsk() {
@@ -2446,6 +2472,7 @@ class KeyboardViewController: UIInputViewController {
     askGeneration += 1
     let generation = askGeneration
     askTurn = AskTurn(activity: audio == nil ? "Working…" : "Transcribing…")
+    askReplySuggestions = []
     askShowsDetails = false
     refreshAsk()
 
@@ -2477,6 +2504,7 @@ class KeyboardViewController: UIInputViewController {
         "language": self.resolvedTtsLanguage().name,
       ]
       if !context.isEmpty { payload["context"] = context }
+      if !self.askHistory.isEmpty { payload["history"] = Array(self.askHistory.suffix(10)) }
       if let audio {
         let stt = KeyboardLanguageCatalog.resolveStt(
           selectedProvider: self.settings.sttProvider, selectedModel: self.settings.sttModel)
@@ -2571,6 +2599,12 @@ class KeyboardViewController: UIInputViewController {
         in: .whitespacesAndNewlines)
       askTurn?.speak = event["speak"] as? Bool ?? false
       askTurn?.summary = event["summary"] as? String
+      askTurn?.suggestions = (event["suggestions"] as? [String] ?? []).filter { !$0.isEmpty }
+      if let turn = askTurn, !turn.request.isEmpty, !turn.text.isEmpty {
+        askHistory += [
+          ["role": "user", "content": turn.request], ["role": "assistant", "content": turn.text],
+        ]
+      }
       if let url = event["audioUrl"] as? String, !url.isEmpty { askTurn?.audioURL = url }
       completeAsk(action: event["action"] as? String ?? "show", generation: generation)
       return
@@ -2893,7 +2927,9 @@ class KeyboardViewController: UIInputViewController {
         trailing: [makeAskPill("Ask") { [weak self] in self?.startNewAsk() }])
     case .shown:
       let line = turn.text.components(separatedBy: .newlines).first ?? turn.text
-      return makeAskRow(icon: nil, title: line, trailing: [makeAskCopyButton()])
+      let action = askWantsReply
+        ? makeAskPill("Reply") { [weak self] in self?.replyToAsk() } : makeAskCopyButton()
+      return makeAskRow(icon: nil, title: line, trailing: [action])
     case .draftChanged:
       return makeAskRow(
         icon: nil, title: "Draft changed · result saved", trailing: [makeAskCopyButton()])
@@ -2970,7 +3006,8 @@ class KeyboardViewController: UIInputViewController {
     label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     let caret = makeBlinkingCaret()
     if askInput.isEmpty {
-      label.text = askMicUnavailable ? "Type your instruction…" : "Tell Hypa what to do…"
+      label.text = !askHistory.isEmpty ? "Reply to Hypa…"
+        : askMicUnavailable ? "Type your instruction…" : "Tell Hypa what to do…"
       label.textColor = UIColor(hex: "#A1A1AA")
       label.lineBreakMode = .byTruncatingTail
       text.addArrangedSubview(caret)
@@ -3019,7 +3056,52 @@ class KeyboardViewController: UIInputViewController {
       send.trailingAnchor.constraint(equalTo: header.trailingAnchor, constant: -panelSideInset),
       send.centerYAnchor.constraint(equalTo: header.centerYAnchor),
     ])
+    // Hypa asked a question: offer its suggested answers until the user starts typing.
+    if askInput.isEmpty, !askReplySuggestions.isEmpty {
+      field.isHidden = true
+      let strip = makeAskSuggestionStrip(askReplySuggestions)
+      header.addSubview(strip)
+      NSLayoutConstraint.activate([
+        strip.leadingAnchor.constraint(equalTo: field.leadingAnchor),
+        strip.trailingAnchor.constraint(equalTo: field.trailingAnchor),
+        strip.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+      ])
+    }
     return header
+  }
+
+  private func makeAskSuggestionStrip(_ suggestions: [String]) -> UIScrollView {
+    let row = UIStackView()
+    row.translatesAutoresizingMaskIntoConstraints = false
+    row.axis = .horizontal
+    row.spacing = 6
+    for suggestion in suggestions {
+      // Flat on purpose: key aesthetics add glass and a shadow that the strip clips.
+      let pill = UIButton(type: .system)
+      pill.backgroundColor = settings.theme.key
+      pill.layer.cornerRadius = 15
+      pill.setTitle(suggestion, for: .normal)
+      pill.setTitleColor(settings.theme.label, for: .normal)
+      pill.titleLabel?.font = .systemFont(ofSize: panelOptionFontSize, weight: .medium)
+      pill.titleLabel?.lineBreakMode = .byTruncatingTail
+      pill.contentEdgeInsets = UIEdgeInsets(top: 6, left: 12, bottom: 6, right: 12)
+      pill.addAction(
+        UIAction { [weak self] _ in self?.sendAskSuggestion(suggestion) }, for: .touchUpInside)
+      row.addArrangedSubview(pill)
+    }
+    let strip = UIScrollView()
+    strip.translatesAutoresizingMaskIntoConstraints = false
+    strip.showsHorizontalScrollIndicator = false
+    strip.addSubview(row)
+    NSLayoutConstraint.activate([
+      row.leadingAnchor.constraint(equalTo: strip.contentLayoutGuide.leadingAnchor),
+      row.trailingAnchor.constraint(equalTo: strip.contentLayoutGuide.trailingAnchor),
+      row.topAnchor.constraint(equalTo: strip.contentLayoutGuide.topAnchor),
+      row.bottomAnchor.constraint(equalTo: strip.contentLayoutGuide.bottomAnchor),
+      row.heightAnchor.constraint(equalTo: strip.frameLayoutGuide.heightAnchor),
+      strip.heightAnchor.constraint(equalToConstant: 32),
+    ])
+    return strip
   }
 
   private func makeAskRecordingRow() -> UIView {
@@ -3206,6 +3288,11 @@ class KeyboardViewController: UIInputViewController {
       stack.addArrangedSubview(note)
     }
 
+    if askWantsReply, let suggestions = turn?.suggestions, !suggestions.isEmpty {
+      stack.setCustomSpacing(12, after: stack.arrangedSubviews.last!)
+      stack.addArrangedSubview(makeAskSuggestionStrip(suggestions))
+    }
+
     // What actually happened, in plain words: tools that ran, where the text went, audio.
     var marks = (turn?.steps ?? []).map { step in
       "\(step.ok == nil ? "…" : step.ok == true ? "✓" : "✕") \(step.label)"
@@ -3248,6 +3335,9 @@ class KeyboardViewController: UIInputViewController {
     actions.axis = .horizontal
     actions.distribution = .equalSpacing
     if turn?.text.isEmpty == false { actions.addArrangedSubview(makeAskCopyButton()) }
+    if askWantsReply {
+      actions.addArrangedSubview(makeAskPill("Reply") { [weak self] in self?.replyToAsk() })
+    }
     if turn?.speak == true, ttsAudioData != nil || turn?.audioURL != nil {
       actions.addArrangedSubview(
         makeAskPill("Play", icon: "play") { [weak self] in
