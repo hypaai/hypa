@@ -34,9 +34,9 @@ export function useChatAudio(connection: AgentConnection) {
   }, [stop]);
   useEffect(() => { stop(); }, [connection.token, stop]);
 
-  const resolveUrl = useCallback((url: string) => resolveAgentAudio(url, connection, async (blob) => {
+  const resolveUrl = useCallback((url: string) => resolveAgentAudio(url, connection, (bytes) => {
     const file = new File(Paths.cache, `hypa-chat-${Date.now()}-${Math.random().toString(36).slice(2)}.wav`);
-    file.write(new Uint8Array(await blob.arrayBuffer()));
+    file.write(new Uint8Array(bytes));
     return file.uri;
   }), [connection]);
 
