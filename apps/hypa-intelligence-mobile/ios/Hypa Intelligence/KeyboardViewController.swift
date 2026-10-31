@@ -2328,6 +2328,8 @@ class KeyboardViewController: UIInputViewController {
     var payload: [String: Any] = [:]
     var sentSelection: String?
     var sentDocument: String?
+    var sentContext: LimitedTextContext?
+    var request = ""
     var activity: String
     var steps: [AskStep] = []
     var text = ""
@@ -2485,6 +2487,8 @@ class KeyboardViewController: UIInputViewController {
       self.askTurn?.payload = payload
       self.askTurn?.sentSelection = selection
       self.askTurn?.sentDocument = selection == nil ? (document ?? "") : nil
+      self.askTurn?.sentContext = self.limitedTextContext()
+      self.askTurn?.request = instruction
       self.streamAsk(generation)
     }
 
@@ -2502,7 +2506,7 @@ class KeyboardViewController: UIInputViewController {
     askGeneration += 1
     var fresh = AskTurn(
       payload: turn.payload, sentSelection: turn.sentSelection, sentDocument: turn.sentDocument,
-      activity: turn.payload["audio"] == nil ? "Working…" : "Transcribing…")
+      sentContext: turn.sentContext, request: turn.request, activity: turn.payload["audio"] == nil ? "Working…" : "Transcribing…")
     fresh.payload["requestId"] = fresh.requestId
     askTurn = fresh
     refreshAsk()
@@ -2547,7 +2551,8 @@ class KeyboardViewController: UIInputViewController {
     switch event["type"] as? String {
     case "transcript":
       askTurn?.activity = "Working…"
-      askTurn?.steps.append(AskStep(id: "transcript", label: "Transcribed", ok: true))
+      if let heard = event["text"] as? String, !heard.isEmpty { askTurn?.request = heard }
+      askTurn?.steps.append(AskStep(id: "transcript", label: "From your voice", ok: true))
     case "tool_call":
       guard let name = event["name"] as? String, name != "finish" else { return }
       let labels = Self.askToolLabels[name] ?? ("Working", "Used a tool")
@@ -2567,7 +2572,6 @@ class KeyboardViewController: UIInputViewController {
       askTurn?.speak = event["speak"] as? Bool ?? false
       askTurn?.summary = event["summary"] as? String
       if let url = event["audioUrl"] as? String, !url.isEmpty { askTurn?.audioURL = url }
-      addAskSummarySteps(action: event["action"] as? String ?? "show")
       completeAsk(action: event["action"] as? String ?? "show", generation: generation)
       return
     case "error":
@@ -2581,21 +2585,6 @@ class KeyboardViewController: UIInputViewController {
       return
     }
     refreshAsk()
-  }
-
-  /// Frames the tool steps as Understood → what it did → Spoke, like the app's run summary.
-  private func addAskSummarySteps(action: String) {
-    guard var turn = askTurn else { return }
-    let understood = AskStep(id: "understood", label: "Understood", ok: true)
-    turn.steps.insert(understood, at: turn.steps.first?.id == "transcript" ? 1 : 0)
-    if !turn.steps.contains(where: { $0.id != "transcript" && $0.id != "understood" }) {
-      let label = action == "replace" ? "Rewrote" : action == "insert" ? "Wrote" : "Answered"
-      turn.steps.append(AskStep(id: "action", label: label, ok: true))
-    }
-    if turn.speak {
-      turn.steps.append(AskStep(id: "spoke", label: "Spoke", ok: turn.audioURL != nil))
-    }
-    askTurn = turn
   }
 
   private func askStreamEnded(_ generation: Int, error: Error?) {
@@ -2689,13 +2678,9 @@ class KeyboardViewController: UIInputViewController {
       }
       self.applyAskText(text, insertAtCursor: action == "insert" || turn.sentSelection != nil)
     }
-    if let selection = turn.sentSelection {
-      apply(textDocumentProxy.selectedText == selection)
-    } else {
-      readFullDocumentText(
-        isCancelled: { [weak self] in self?.askGeneration != generation },
-        completion: { current, _ in apply(current == turn.sentDocument) })
-    }
+    // ponytail: compares only the text around the cursor; re-reading the whole field
+    // moves the cursor visibly, so far-away edits go unnoticed.
+    apply(limitedTextContext() == turn.sentContext)
   }
 
   private func applyAskText(_ text: String, insertAtCursor: Bool) {
@@ -3178,18 +3163,31 @@ class KeyboardViewController: UIInputViewController {
     scroll.addSubview(stack)
 
     let turn = askTurn
-    let caption = UILabel()
-    caption.attributedText = NSAttributedString(
-      string: turn?.error != nil ? "DETAILS" : turn?.outcome == nil ? "WORKING" : "ANSWER",
-      attributes: [.kern: 1.2])
-    caption.textColor = settings.theme.label.withAlphaComponent(0.6)
-    caption.font = .systemFont(ofSize: panelCaptionFontSize, weight: .medium)
-    stack.addArrangedSubview(caption)
+    let addCaption = { (text: String) in
+      let caption = UILabel()
+      caption.attributedText = NSAttributedString(string: text, attributes: [.kern: 1.2])
+      caption.textColor = self.settings.theme.label.withAlphaComponent(0.55)
+      caption.font = .systemFont(ofSize: self.panelCaptionFontSize, weight: .medium)
+      stack.addArrangedSubview(caption)
+      stack.setCustomSpacing(4, after: caption)
+    }
 
+    if let request = turn?.request, !request.isEmpty {
+      addCaption("YOU ASKED")
+      let asked = UILabel()
+      asked.text = request
+      asked.numberOfLines = 2
+      asked.textColor = settings.theme.label.withAlphaComponent(0.75)
+      asked.font = .systemFont(ofSize: panelOptionFontSize)
+      stack.addArrangedSubview(asked)
+      stack.setCustomSpacing(14, after: asked)
+    }
+
+    addCaption(turn?.error != nil ? "DETAILS" : turn?.outcome == nil ? "WORKING" : "ANSWER")
     let body = UILabel()
     body.numberOfLines = 0
     body.textColor = settings.theme.label
-    body.font = .systemFont(ofSize: max(settings.fontSize + 3, 18))
+    body.font = .systemFont(ofSize: panelTitleFontSize + 1)
     if let error = turn?.error {
       body.text = turn?.errorDetail.map { "\(error)\n\n\($0)" } ?? error
     } else if let text = turn?.text, !text.isEmpty {
@@ -3202,21 +3200,33 @@ class KeyboardViewController: UIInputViewController {
       let note = UILabel()
       note.text = summary
       note.numberOfLines = 0
-      note.textColor = settings.theme.label.withAlphaComponent(0.6)
-      note.font = .systemFont(ofSize: max(settings.fontSize - 1, 13))
+      note.textColor = settings.theme.label.withAlphaComponent(0.55)
+      note.font = .systemFont(ofSize: panelOptionFontSize)
       stack.setCustomSpacing(4, after: body)
       stack.addArrangedSubview(note)
     }
 
-    if let steps = turn?.steps, !steps.isEmpty {
+    // What actually happened, in plain words: tools that ran, where the text went, audio.
+    var marks = (turn?.steps ?? []).map { step in
+      "\(step.ok == nil ? "…" : step.ok == true ? "✓" : "✕") \(step.label)"
+    }
+    switch turn?.outcome {
+    case .replaced?:
+      marks.append(turn?.sentSelection != nil ? "✓ Replaced your selection" : "✓ Replaced your text")
+    case .inserted?: marks.append("✓ Added to your text")
+    case .restored?: marks.append("↺ Original restored")
+    case .draftChanged?: marks.append("! Not applied, your text changed")
+    case .shown?, .recovered?, nil: break
+    }
+    if turn?.speak == true, turn?.outcome != nil {
+      marks.append(turn?.audioURL != nil ? "✓ Read aloud" : "✕ Couldn't read aloud")
+    }
+    if !marks.isEmpty {
       let chips = UIStackView()
       chips.axis = .horizontal
       chips.spacing = 6
       chips.alignment = .leading
-      for step in steps {
-        let mark = step.ok == nil ? "…" : step.ok == true ? "✓" : "✕"
-        chips.addArrangedSubview(makeDictionaryChip("\(mark) \(step.label)"))
-      }
+      marks.forEach { chips.addArrangedSubview(makeDictionaryChip($0, fontSize: panelCaptionFontSize + 1)) }
       let chipScroll = UIScrollView()
       chipScroll.showsHorizontalScrollIndicator = false
       chips.translatesAutoresizingMaskIntoConstraints = false
@@ -3227,8 +3237,9 @@ class KeyboardViewController: UIInputViewController {
         chips.topAnchor.constraint(equalTo: chipScroll.contentLayoutGuide.topAnchor),
         chips.bottomAnchor.constraint(equalTo: chipScroll.contentLayoutGuide.bottomAnchor),
         chips.heightAnchor.constraint(equalTo: chipScroll.frameLayoutGuide.heightAnchor),
-        chipScroll.heightAnchor.constraint(equalToConstant: 30),
+        chipScroll.heightAnchor.constraint(equalToConstant: 28),
       ])
+      stack.setCustomSpacing(12, after: stack.arrangedSubviews.last!)
       stack.addArrangedSubview(chipScroll)
     }
 
@@ -5302,7 +5313,7 @@ class KeyboardViewController: UIInputViewController {
     return section
   }
 
-  private func makeDictionaryChip(_ text: String) -> UIView {
+  private func makeDictionaryChip(_ text: String, fontSize: CGFloat? = nil) -> UIView {
     let chip = UIView()
     chip.translatesAutoresizingMaskIntoConstraints = false
     chip.layer.borderColor = settings.theme.label.withAlphaComponent(0.12).cgColor
@@ -5312,7 +5323,7 @@ class KeyboardViewController: UIInputViewController {
     let label = UILabel()
     label.translatesAutoresizingMaskIntoConstraints = false
     label.text = text
-    label.font = .systemFont(ofSize: max(settings.fontSize - 3, 10))
+    label.font = .systemFont(ofSize: fontSize ?? max(settings.fontSize - 3, 10))
     label.textColor = settings.theme.label
     chip.addSubview(label)
     NSLayoutConstraint.activate([
@@ -7505,7 +7516,7 @@ class KeyboardViewController: UIInputViewController {
   private func iconKeys() -> Set<String> { Self.iconKeySet }
   private func utilityKeys() -> Set<String> { Self.utilityKeySet }
   private func fontSize(for key: String) -> CGFloat {
-    if key == "space" { return settings.fontSize }
+    if key == "space" { return max(settings.fontSize - 5, 12) }
     guard key.count == 1 else { return max(settings.fontSize - 3, 10) }
     return boardMode == .numeric ? settings.fontSize + 5 : settings.fontSize
   }
