@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, TextInput, View } from "react-native";
+import { ActivityIndicator, BackHandler, Image, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetch as expoFetch } from "expo/fetch";
@@ -64,6 +64,11 @@ export default function AskCamera() {
         throw new Error("Allow camera access in Settings to take a photo.");
       const result = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 1 });
       if (result.canceled || !result.assets[0]) {
+        // Android can hand the user straight back to the app they were typing in.
+        if (Platform.OS === "android") {
+          BackHandler.exitApp();
+          return;
+        }
         setPhase("cancelled");
         return;
       }
@@ -227,9 +232,11 @@ export default function AskCamera() {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Check color={colors.icon} size={18} />
               <Text style={{ ...muted, flex: 1 }}>
-                {linked
-                  ? "Ready in your keyboard. Tap ◀ at the top-left to go back."
-                  : "Copy it, then paste it in your keyboard."}
+                {!linked
+                  ? "Copy it, then paste it in your keyboard."
+                  : Platform.OS === "android"
+                    ? "Ready in your keyboard."
+                    : "Ready in your keyboard. Tap ◀ at the top-left to go back."}
               </Text>
             </View>
             <Pressable
@@ -245,6 +252,23 @@ export default function AskCamera() {
                 {copied ? "Copied" : "Copy"}
               </Text>
             </Pressable>
+            {Platform.OS === "android" && (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => BackHandler.exitApp()}
+                style={{
+                  height: 48,
+                  borderRadius: 24,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: colors.primary,
+                }}
+              >
+                <Text style={{ color: colors.primaryForeground, fontFamily: FONTS.main.medium, fontSize: 16 }}>
+                  Back to App
+                </Text>
+              </Pressable>
+            )}
           </>
         )}
 
