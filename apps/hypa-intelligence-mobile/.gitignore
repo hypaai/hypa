@@ -9,6 +9,8 @@ web-build/
 *.apk
 *.tar.gz
 Podfile.lock
+.cxx/
+.kotlin/
 
 *.orig.*
 *.jks
@@ -31,3 +33,5 @@ yarn-error.*
 *.tsbuildinfo
 
 expo-env.d.ts
+
+n-modules/*/nitrogen/generated/

@@ -52,7 +52,7 @@
       "expo-router",
       "expo-apple-authentication",
       "expo-dev-client",
-      "./plugins/hypa-keyboard-android-ime",
+      "./plugins/hypa-keyboard-android-ime/app.plugin.js",
       "expo-video",
       [
         "expo-audio",

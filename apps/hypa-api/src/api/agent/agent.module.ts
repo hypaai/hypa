@@ -12,6 +12,8 @@ import { AgentController } from './agent.controller';
 import { AgentMediaService, FirebaseBlobStore } from './agent.media';
 import { AgentService } from './agent.service';
 import { HypaToolExecutor } from './tool-executor';
+import { LensSocketService } from './lens-socket.service';
+import { AuthGuard } from '../auth/auth.guard';
 
 @Module({
   imports: [DeveloperModule, DictionaryModule, AudioModule, TranslateModule],
@@ -28,6 +30,8 @@ import { HypaToolExecutor } from './tool-executor';
     },
     AgentService,
     HypaToolExecutor,
+    AuthGuard,
+    LensSocketService,
     {
       provide: AgentMediaService,
       useFactory: (storage: StorageService) =>

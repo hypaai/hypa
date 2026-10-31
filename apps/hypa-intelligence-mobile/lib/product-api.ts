@@ -122,6 +122,34 @@ export async function translateText(params: {
   };
 }
 
+export async function translateLensLine(params: {
+  text: string;
+  targetLang: string;
+  signal?: AbortSignal;
+}): Promise<string> {
+  const { body, translationId } = buildMtRequest({
+    text: params.text,
+    sourceLang: AUTO_DETECT_LANGUAGE,
+    targetLang: params.targetLang,
+    llmModel: 'auto',
+  });
+  const response = await api.post<string>(
+    TRANSLATE_ENDPOINTS.mt,
+    { ...body, save_history: false },
+    {
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        Accept: 'application/json; charset=utf-8',
+      },
+      responseType: 'text',
+      transformResponse: [(data) => data],
+      signal: params.signal,
+    }
+  );
+  const parsed = mapMtResponse(response.data, { sourceLang: AUTO_DETECT_LANGUAGE }, translationId);
+  return parseTranslation(parsed.translation).mainContent || parsed.translation;
+}
+
 export async function translateThinking(
   params: TranslateThinkingAPIParams
 ): Promise<string> {

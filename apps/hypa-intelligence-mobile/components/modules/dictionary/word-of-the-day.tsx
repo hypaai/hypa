@@ -46,10 +46,6 @@ export default function WordOfTheDay() {
       player.remove()
     } catch {}
 
-    try {
-      player.release()
-    } catch {}
-
     playerRef.current = null
     setAudioState('idle')
   }, [])

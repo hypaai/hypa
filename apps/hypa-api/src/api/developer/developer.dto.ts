@@ -91,6 +91,10 @@ export class DeveloperMtDto extends BaseDeveloperBody {
   @IsBoolean()
   @IsOptional()
   thinking?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  save_history?: boolean;
 }
 
 export class DeveloperMtThinkingDto extends BaseDeveloperBody {

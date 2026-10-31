@@ -457,6 +457,7 @@ export class TranslateService {
     outputText: string;
     autoResolution?: Prisma.InputJsonValue;
   }) {
+    if (params.body.save_history === false) return;
     if (!params.userId) {
       this.logger.log({
         message: 'Skipping translation table save',

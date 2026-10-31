@@ -58,6 +58,7 @@ const MAX_ATTEMPTS = 3;
 const ATTEMPT_TIMEOUT_MS = 12_000;
 const DEADLINE_MS = 35_000;
 const MIN_ATTEMPT_MS = 2_000;
+const BENCHMARK_TTL_MS = 60_000;
 const COOLDOWN_MS = 30_000;
 const AUTO_PROGRESS_TTL_MS = DEADLINE_MS + 10_000;
 const AUTO_RESOLUTION_TTL_MS = 60 * 60 * 1000;
@@ -219,20 +220,7 @@ export class AutoRouterService {
     let rows: BenchmarkRow[] = [];
     let benchmarkStatus: BenchmarkStatus = 'ok';
     try {
-      rows = await this.db.benchmark_result.findMany({
-        where: {
-          taskType: 'MT',
-          datasetKey: DATASET_BY_CAPABILITY.MT,
-          hidden: false,
-        },
-        select: {
-          provider: true,
-          model: true,
-          metrics: true,
-          sampleCount: true,
-          language_metrics: true,
-        },
-      });
+      rows = await this.benchmarkRows();
     } catch (error) {
       benchmarkStatus = 'unavailable';
       try {
@@ -655,18 +643,44 @@ export class AutoRouterService {
     );
   }
 
+  private benchmarkCache?: { at: number; rows: Promise<BenchmarkRow[]> };
+
+  private benchmarkRows(): Promise<BenchmarkRow[]> {
+    const cached = this.benchmarkCache;
+    if (cached && Date.now() - cached.at < BENCHMARK_TTL_MS) return cached.rows;
+    const rows = this.db.benchmark_result.findMany({
+      where: {
+        taskType: 'MT',
+        datasetKey: DATASET_BY_CAPABILITY.MT,
+        hidden: false,
+      },
+      select: {
+        provider: true,
+        model: true,
+        metrics: true,
+        sampleCount: true,
+        language_metrics: true,
+      },
+    });
+    const entry = { at: Date.now(), rows };
+    this.benchmarkCache = entry;
+    rows.catch(() => {
+      if (this.benchmarkCache === entry) this.benchmarkCache = undefined;
+    });
+    return rows;
+  }
+
   private async coolingEntries(entries: AutoPlanEntry[]) {
-    const cooling = new Set<string>();
-    for (const entry of entries) {
-      try {
-        if (await this.cacheManager.get(this.cooldownKey(entry))) {
-          cooling.add(this.entryKey(entry));
-        }
-      } catch {
-        return new Set<string>();
-      }
+    try {
+      const flags = await Promise.all(
+        entries.map((entry) => this.cacheManager.get(this.cooldownKey(entry))),
+      );
+      return new Set(
+        entries.filter((_, index) => flags[index]).map((entry) => this.entryKey(entry)),
+      );
+    } catch {
+      return new Set<string>();
     }
-    return cooling;
   }
 
   private async setCooling(entry: AutoPlanEntry) {
