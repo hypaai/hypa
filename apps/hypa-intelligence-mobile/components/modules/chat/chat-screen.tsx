@@ -239,6 +239,9 @@ export function ChatScreen({
       recordingOwner.current = null;
       void submitRef.current(text, [], voiceRef.current).catch(report);
     },
+    onNoTranscript: () => {
+      if (voiceRef.current) stopVoice();
+    },
     runWithConsent,
     stopPlayers: audio.stop,
     toast,
@@ -888,7 +891,7 @@ export function ChatScreen({
                         audio.playingId === item.id ||
                         audio.loadingId === item.id
                       )
-                        audio.stop();
+                        stopVoice();
                       else {
                         stopVoice();
                         void audio

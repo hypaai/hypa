@@ -1037,13 +1037,14 @@ function finishTool(): FunctionTool {
     function: {
       name: 'finish',
       description:
-        'End a keyboard turn. replace: the text replaces the field or the selection (an edit or a translation). insert: the field is empty, so the text is added to it. show: the text is shown and the field stays unchanged (a question about the text, or reading it out). Set speak to true to also read the text aloud, and do not call text_to_speech for that. "Read this out" alone is show with speak true.',
+        'End a keyboard turn. replace: the text replaces the field or the selection (an edit or a translation). insert: the field is empty, so the text is added to it. show: the text is shown and the field stays unchanged (a question about the text, or reading it out). Set speak to true to also read the text aloud, and do not call text_to_speech for that. "Read this out" alone is show with speak true. summary is a short past-tense note of what you did, under 40 characters, for example "Your draft, rewritten politely.".',
       parameters: {
         type: 'object',
         properties: {
           action: { type: 'string', enum: ['replace', 'insert', 'show'] },
           text: { type: 'string' },
           speak: { type: 'boolean' },
+          summary: { type: 'string' },
         },
         required: ['action', 'text', 'speak'],
       },
