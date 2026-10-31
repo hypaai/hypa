@@ -2,7 +2,7 @@ import http from 'http';
 import { INestApplicationContext } from '@nestjs/common';
 import { WsAdapter } from '@nestjs/platform-ws';
 import { Server as WsServer } from 'ws';
-import { isLensSocketRequest } from './api/translate/lens/lens-socket.service';
+import { isLensSocketRequest } from './api/agent/lens-socket.service';
 
 export interface WsAuthResult {
   userId: string;

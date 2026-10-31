@@ -3,7 +3,7 @@ import { isAxiosError } from 'axios';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Flashlight, FlashlightOff, Pause, Play, Volume2, X } from 'lucide-react-native';
+import { Eraser, Flashlight, FlashlightOff, Pause, Play, Square, Volume2, X } from 'lucide-react-native';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
@@ -21,6 +21,8 @@ import { lineShape, type Size } from '@/lib/lens/overlay-geometry';
 import { type PreviewBasis, toPreviewCameraPoint } from '@/lib/lens/frame-points';
 import { LensSocket, LensSocketOffline, LensSocketUnavailable } from '@/lib/lens/lens-socket';
 import { trackLines } from '@/lib/lens/stabilize-lines';
+import { StickyOverlay } from '@/lib/lens/sticky-overlay';
+import { PageLayout } from '@/lib/lens/page-layout';
 import { languageNameToCode } from '@/lib/model-languages';
 import { synthesizeSpeech, translateLensLine } from '@/lib/product-api';
 import { useToast } from '@/lib/toast';
@@ -66,9 +68,16 @@ export default function LensScreen() {
   const [speaking, setSpeaking] = useState<'loading' | 'playing' | null>(null);
 
   const liveLines = useRef(new LiveLines()).current;
+  const sticky = useRef(new StickyOverlay()).current;
+  const layout = useRef(new PageLayout()).current;
   const abort = useRef(new AbortController()).current;
   const socket = useRef(new LensSocket()).current;
   const lastTextAt = useRef(Date.now());
+  const agentRef = useRef({ provider: 'meta', model: 'muse-spark-1.3' });
+  agentRef.current = {
+    provider: settings?.assistantProvider ?? 'meta',
+    model: settings?.assistantModel ?? 'muse-spark-1.3',
+  };
   const targetRef = useRef(targetLang);
   targetRef.current = targetLang;
   const playerRef = useRef<AudioPlayer | null>(null);
@@ -101,7 +110,7 @@ export default function LensScreen() {
     (due: string[], target: string) => {
       for (const line of due) {
         socket
-          .translate(line, target)
+          .translate(line, target, agentRef.current)
           .catch((error) => {
             if (error instanceof LensSocketUnavailable) {
               return translateLensLine({ text: line, targetLang: target, signal: abort.signal });
@@ -170,31 +179,28 @@ export default function LensScreen() {
 
   const overlay = useMemo<OverlayLine[]>(() => {
     if (!frameLines || !viewBasis) return [];
-    return frameLines.lines.flatMap((line): OverlayLine[] => {
-      const translation = liveLines.lookup(line.text, targetLang);
-      const loading = !translation && liveLines.isLoading(line.text, targetLang);
-      if (!translation && !loading) return [];
-      if (translation && normalizeLine(translation).toLowerCase() === normalizeLine(line.text).toLowerCase()) {
-        return [];
-      }
+    sticky.begin(targetLang, frameLines.lines);
+    const visible = frameLines.lines.flatMap((line) => {
+      const fresh = liveLines.lookup(line.text, targetLang);
       const shape = lineShape(line.corners.map((point) => toPreviewCameraPoint(point, viewBasis)));
-      if (!translation) {
-        return [{ ...shape, key: String(line.id), background: line.background, color: line.color, loading: true }];
-      }
-      const upper = isUpperCase(line.text);
-      return [
-        {
-          ...shape,
-          key: String(line.id),
-          text: upper ? translation.toLocaleUpperCase() : translation,
-          background: line.background,
-          color: line.color,
-          weight: line.weight,
-          fontSize: Math.max(8, shape.thickness * (upper ? 1.2 : 0.9)),
-        },
-      ];
+      const shown = sticky.place(line.id, line, shape, fresh);
+      const translation = shown.text;
+      if (!translation && !liveLines.isLoading(line.text, targetLang)) return [];
+      if (translation && normalizeLine(translation).toLowerCase() === normalizeLine(line.text).toLowerCase()) return [];
+      return [{ ...shape, length: shown.length, thickness: shown.thickness, line, shown, translation }];
     });
-  }, [frameLines, liveLines, targetLang, translationsVersion, viewBasis]);
+    return layout.arrange(visible).map(({ line, shown, translation, ...shape }): OverlayLine => {
+      const base = { ...shape, key: String(line.id), background: shown.background, color: shown.color };
+      if (!translation) return { ...base, loading: true };
+      const upper = isUpperCase(line.text);
+      return {
+        ...base,
+        text: upper ? translation.toLocaleUpperCase() : translation,
+        weight: shown.weight,
+        fontSize: Math.max(8, shape.thickness * (upper ? 1.2 : 0.9)),
+      };
+    });
+  }, [frameLines, layout, liveLines, sticky, targetLang, translationsVersion, viewBasis]);
 
   const spokenText = useMemo(
     () => [...new Set(overlay.flatMap((line) => (line.loading ? [] : [line.text])))].join('\n'),
@@ -250,6 +256,15 @@ export default function LensScreen() {
     },
     [frameLines, liveLines, paused, stopSpeech, translate]
   );
+
+  const clearOverlay = useCallback(() => {
+    stopSpeech();
+    liveLines.clear();
+    sticky.clear();
+    layout.reset();
+    setFrameLines(null);
+    setTranslationsVersion((version) => version + 1);
+  }, [layout, liveLines, sticky, stopSpeech]);
 
   const togglePause = useCallback(() => {
     stopSpeech();
@@ -344,7 +359,16 @@ export default function LensScreen() {
           label={speaking ? 'Stop reading' : 'Read translation aloud'}
           onPress={() => void speak()}
           disabled={!speaking && (!spokenText || !voice)}>
-          {speaking === 'loading' ? <ActivityIndicator color="#fff" /> : <Volume2 color="#fff" size={22} />}
+          {speaking === 'loading' ? (
+            <ActivityIndicator color="#fff" />
+          ) : speaking === 'playing' ? (
+            <Square color="#fff" fill="#fff" size={18} />
+          ) : (
+            <Volume2 color="#fff" size={22} />
+          )}
+        </RoundButton>
+        <RoundButton label="Clear translations" onPress={clearOverlay} disabled={!overlay.length}>
+          <Eraser color="#fff" size={22} />
         </RoundButton>
       </View>
     </View>

@@ -70,6 +70,8 @@ export interface OpenAgentInput {
   requestId: string;
   userId?: string;
   lab?: boolean;
+  /** Run without a chat, agent_run row or history: for high-volume callers such as Lens. Billing still applies. */
+  ephemeral?: boolean;
   input: string;
   toolNames?: string[];
   systemInstruction?: string;
@@ -138,7 +140,7 @@ export class AgentService {
       }
       return live;
     }
-    if (input.userId) {
+    if (input.userId && !input.ephemeral) {
       const existing = (await this.db.agent_run.findUnique({
         where: { request_id: input.requestId },
       })) as StoredRun | null;
@@ -190,7 +192,7 @@ export class AgentService {
         this.push(job, failure);
         job.status = 'failed';
         const lostCreate = (error as { code?: string } | null)?.code === 'P2002';
-        if (input.userId && !lostCreate) {
+        if (input.userId && !lostCreate && !input.ephemeral) {
           try {
             const stored = await this.db.agent_run.findUnique({ where: { request_id: input.requestId } });
             if (stored) await this.db.agent_run.update({
@@ -362,7 +364,7 @@ export class AgentService {
     const sentAt = new Date();
     const userMessageId = randomUUID();
     const assistantMessageId = randomUUID();
-    if (userId) {
+    if (userId && !input.ephemeral) {
       await this.db.agent_run.create({
         data: {
           request_id: input.requestId,
@@ -730,7 +732,7 @@ export class AgentService {
       const failure = agentFailure(signal.reason);
       if (!trace.some((event) => event.type === 'error' && event.code === failure.code)) trace.push(failure);
     }
-    if (!userId) {
+    if (!userId || input.ephemeral) {
       job.status = done ? 'done' : 'failed';
       return;
     }

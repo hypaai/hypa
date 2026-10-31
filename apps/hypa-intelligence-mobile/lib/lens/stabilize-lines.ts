@@ -10,6 +10,8 @@ export const HOLD_MS = 800;
 const SAME_TEXT = 0.8;
 const MATCH_DISTANCE = 0.03;
 const STILL_DISTANCE = 0.0025;
+/** A reading this close to a known line is the same line even if OCR read it differently. */
+const SAME_PLACE = 0.006;
 
 const sameText = (a: string, b: string) => a === b || similarity(a, b) >= SAME_TEXT;
 
@@ -32,11 +34,25 @@ export function stabilizeLines<T extends Line>(previous: T[], current: T[]): T[]
   return current.map((line) => smooth(unused, line).line);
 }
 
+function nearest<T extends Line>(unused: Set<T>, line: Line): T | undefined {
+  let best: T | undefined;
+  let error = SAME_PLACE;
+  for (const candidate of unused) {
+    if (candidate.corners.length !== line.corners.length) continue;
+    const delta = Math.max(...line.corners.map((point, i) =>
+      Math.hypot(point.x - candidate.corners[i].x, point.y - candidate.corners[i].y)));
+    if (delta <= error) { best = candidate; error = delta; }
+  }
+  return best;
+}
+
 export function trackLines<T extends Line>(previous: Seen<T>[], current: T[], now: number): Seen<T>[] {
   const unused = new Set(previous);
-  const next: Seen<T>[] = current.map((line) => {
-    const { line: placed, matched } = smooth(unused, line as Seen<T>);
-    return { ...placed, seenAt: now, id: matched?.id ?? ++nextId };
+  const smoothed = current.map((line) => smooth(unused, line as Seen<T>));
+  const next: Seen<T>[] = smoothed.map(({ line: placed, matched }) => {
+    const same = matched ?? nearest(unused, placed);
+    if (same && !matched) unused.delete(same);
+    return { ...placed, seenAt: now, id: same?.id ?? ++nextId };
   });
   for (const held of unused) {
     if (now - held.seenAt >= HOLD_MS) continue;

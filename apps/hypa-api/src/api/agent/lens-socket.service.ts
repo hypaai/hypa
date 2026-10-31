@@ -6,28 +6,32 @@ import {
   OnApplicationShutdown,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
-import { buildMtRequest, mapMtResponse } from '@hypa/translate-core';
-import { parseTranslation } from '@hypa/translate-core/thinking';
-import { EventEmitter } from 'events';
-import type { Request } from 'express';
+import { randomUUID } from 'crypto';
 import type { IncomingMessage, Server } from 'http';
 import type { Duplex } from 'stream';
-import { lastValueFrom, type Observable } from 'rxjs';
 import { WebSocket, WebSocketServer } from 'ws';
-import type { DeveloperMtDto } from '../../developer/developer.dto';
-import { AuthGuard } from '../../auth/auth.guard';
-import { TranslateController } from '../translate.controller';
+import { AuthGuard } from '../auth/auth.guard';
+import { AgentService } from './agent.service';
 
-export const LENS_SOCKET_PATH = '/v2/translate/lens';
+export const LENS_SOCKET_PATH = '/v2/agent/lens';
 
 const MAX_TEXT_LENGTH = 500;
 const MAX_IN_FLIGHT = 6;
 const MAX_QUEUED = 40;
+const DEFAULT_PROVIDER = 'meta';
+const DEFAULT_MODEL = 'muse-spark-1.3';
+const LENS_TOOL = 'translate_message';
 
-type Caller = { user?: unknown; userId?: string; apiKeyId?: string };
-type Job = { id: string; text: string; target: string };
+export const LENS_INSTRUCTION = [
+  'You translate short lines of text read from a camera.',
+  `Call ${LENS_TOOL} exactly once with the line as text and the requested language as targetLang.`,
+  'Then reply with only the translation: no quotes, notes or explanations.',
+].join(' ');
+
+type Caller = { user?: { id?: string }; userId?: string };
+type Job = { id: string; text: string; target: string; provider: string; model: string };
 type Inbound =
-  | { type: 'translate'; id: string; text: string; target: string }
+  | { type: 'translate'; id: string; text: string; target: string; provider?: string; model?: string }
   | { type: 'cancel'; id: string };
 
 export const isLensSocketRequest = (req: IncomingMessage) =>
@@ -42,7 +46,7 @@ export class LensSocketService implements OnApplicationBootstrap, OnApplicationS
   constructor(
     private readonly adapterHost: HttpAdapterHost,
     private readonly guard: AuthGuard,
-    private readonly translate: TranslateController,
+    private readonly agent: AgentService,
   ) {}
 
   onApplicationBootstrap() {
@@ -130,7 +134,9 @@ export class LensSocketService implements OnApplicationBootstrap, OnApplicationS
         send({ type: 'error', id: message.id, message: 'Too many lines' });
         return;
       }
-      queue.push({ id: message.id, text, target });
+      const provider = typeof message.provider === 'string' && message.provider.trim() ? message.provider.trim() : DEFAULT_PROVIDER;
+      const model = typeof message.model === 'string' && message.model.trim() ? message.model.trim() : DEFAULT_MODEL;
+      queue.push({ id: message.id, text, target, provider, model });
       next();
     });
 
@@ -142,30 +148,44 @@ export class LensSocketService implements OnApplicationBootstrap, OnApplicationS
     client.on('error', (error) => this.logger.warn(`Lens socket error: ${error.message}`));
   }
 
-  private async run(job: Job, caller: Caller, signal: AbortSignal) {
-    const { body, translationId } = buildMtRequest({
-      text: job.text,
-      sourceLang: 'auto',
-      targetLang: job.target,
-      llmModel: 'auto',
+  /** Runs the line through the same agent pipeline as POST /v2/agent, without saving a chat. */
+  private async run(job: Job, caller: Caller, signal: AbortSignal): Promise<string> {
+    signal.throwIfAborted();
+    const run = await this.agent.open({
+      requestId: randomUUID(),
+      userId: caller.user?.id ?? caller.userId,
+      ephemeral: true,
+      input: `Translate into ${job.target}:\n${job.text}`,
+      provider: job.provider,
+      model: job.model,
+      surface: 'app',
+      toolNames: [LENS_TOOL],
+      systemInstruction: LENS_INSTRUCTION,
     });
-    const request = { ...body, save_history: false } as DeveloperMtDto & { client_request_id?: string };
-    delete request.client_request_id;
-
-    const res = Object.assign(new EventEmitter(), { writableEnded: false });
-    const onAbort = () => res.emit('close');
-    signal.addEventListener('abort', onAbort, { once: true });
-    const req = { ...caller, headers: {}, res, signal } as unknown as Request & Caller;
-    try {
-      const response = await this.translate.translateText(request, req);
-      caller.apiKeyId ??= req.apiKeyId;
-      const payload = await lastValueFrom(response as Observable<{ data: unknown }>);
-      signal.throwIfAborted();
-      const data = typeof payload.data === 'string' ? payload.data : JSON.stringify(payload.data ?? '');
-      const mapped = mapMtResponse(data, { sourceLang: 'auto' }, translationId);
-      return parseTranslation(mapped.translation).mainContent || mapped.translation;
-    } finally {
-      signal.removeEventListener('abort', onAbort);
-    }
+    return new Promise<string>((resolve, reject) => {
+      let settled = false;
+      const finish = (error: Error | null, text?: string) => {
+        if (settled) return;
+        settled = true;
+        signal.removeEventListener('abort', onAbort);
+        // The tool result is the translation; skip the model's closing turn.
+        this.agent.cancel(run);
+        queueMicrotask(() => stop());
+        if (error) reject(error);
+        else resolve(text!);
+      };
+      const onAbort = () => finish(new Error('Cancelled'));
+      signal.addEventListener('abort', onAbort, { once: true });
+      const stop = this.agent.subscribe(run, (event) => {
+        if (!event) return finish(new Error('No translation returned'));
+        if (event.type === 'tool_result' && event.name === LENS_TOOL) {
+          const translation = event.ok ? (event.result as { translation?: unknown } | undefined)?.translation : undefined;
+          if (typeof translation === 'string' && translation.trim()) return finish(null, translation.trim());
+          return finish(new Error(event.ok ? 'No translation returned' : event.error || 'Translation failed'));
+        }
+        if (event.type === 'done' && event.text?.trim()) return finish(null, event.text.trim());
+        if (event.type === 'error') return finish(new Error(event.message || 'Translation failed'));
+      });
+    });
   }
 }

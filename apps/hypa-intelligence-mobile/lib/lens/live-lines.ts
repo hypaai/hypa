@@ -133,6 +133,11 @@ export class LiveLines {
     }
   }
 
+  clear() {
+    this.seen.clear();
+    this.entries.clear();
+  }
+
   reject(target: string, lines: string[], now: number) {
     for (const line of lines) this.entries.set(this.key(line, target), { state: 'failed', at: now });
   }

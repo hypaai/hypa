@@ -1,10 +1,13 @@
-import { type ReactNode, useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { type ReactNode, useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  cancelAnimation,
+  Easing,
   type SharedValue,
   useAnimatedStyle,
   useFrameCallback,
   useSharedValue,
+  withRepeat,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -23,8 +26,14 @@ export type OverlayLine = LineShape & {
 export type MotionToView = { x: { x: number; y: number }; y: { x: number; y: number } };
 
 const GLIDE_MS = 70;
-const PAD_ALONG = 0.15;
-const PAD_ACROSS = 0.1;
+// Generous padding so ascenders, descenders and OCR's tight boxes never let the source text show.
+const PAD_ALONG = 0.35;
+const PAD_ACROSS = 0.28;
+const PULSE_MS = 700;
+const REVEAL_MS = 160;
+const SKELETON_HEIGHT = 0.42;
+const SKELETON_MIN = 0.12;
+const SKELETON_MAX = 0.32;
 
 const FONT_BY_WEIGHT: Record<LineWeight, string> = {
   regular: FONTS.main.regular,
@@ -42,6 +51,12 @@ export function LensOverlay({
   motionToView: SharedValue<MotionToView | null>;
 }) {
   const offset = useSharedValue({ x: 0, y: 0 });
+  const pulse = useSharedValue(0);
+
+  useEffect(() => {
+    pulse.value = withRepeat(withTiming(1, { duration: PULSE_MS, easing: Easing.inOut(Easing.sin) }), -1, true);
+    return () => cancelAnimation(pulse);
+  }, [pulse]);
 
   useFrameCallback((frame) => {
     const toView = motionToView.value;
@@ -61,45 +76,64 @@ export function LensOverlay({
 
   return (
     <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, follow]}>
-      {lines.map((line) => {
-        if (line.loading) {
-          const size = Math.min(22, Math.max(12, line.thickness * 0.8));
-          return (
-            <Patch key={line.key} line={line}>
-              <View style={[StyleSheet.absoluteFill, styles.centered]}>
-                <View
-                  style={[
-                    styles.spinner,
-                    { width: size + 8, height: size + 8, borderRadius: (size + 8) / 2, backgroundColor: line.background },
-                  ]}>
-                  <ActivityIndicator size="small" color={line.color} style={{ transform: [{ scale: size / 20 }] }} />
-                </View>
-              </View>
-            </Patch>
-          );
-        }
-        return (
-          <Patch key={line.key} line={line} filled>
-            <View style={[StyleSheet.absoluteFill, styles.centered]}>
-              <Text
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.3}
-                style={[
-                  styles.text,
-                  { color: line.color, fontFamily: FONT_BY_WEIGHT[line.weight], fontSize: line.fontSize },
-                ]}>
-                {line.text}
-              </Text>
-            </View>
-          </Patch>
-        );
-      })}
+      {lines.map((line) => (
+        <Patch key={line.key} line={line}>
+          <LineContent line={line} pulse={pulse} />
+        </Patch>
+      ))}
     </Animated.View>
   );
 }
 
-function Patch({ line, filled, children }: { line: OverlayLine; filled?: boolean; children: ReactNode }) {
+function LineContent({ line, pulse }: { line: OverlayLine; pulse: SharedValue<number> }) {
+  const arrived = useSharedValue(line.loading ? 0 : 1);
+  const [text, setText] = useState<Extract<OverlayLine, { text: string }> | null>(line.loading ? null : line);
+
+  useEffect(() => {
+    if (line.loading) {
+      arrived.value = withTiming(0, { duration: REVEAL_MS });
+      return;
+    }
+    setText(line);
+    arrived.value = withTiming(1, { duration: REVEAL_MS });
+  }, [arrived, line]);
+
+  const skeleton = useAnimatedStyle(() => ({
+    opacity: (1 - arrived.value) * (SKELETON_MIN + (SKELETON_MAX - SKELETON_MIN) * pulse.value),
+  }));
+  const reveal = useAnimatedStyle(() => ({ opacity: arrived.value }));
+
+  const barHeight = Math.max(3, line.thickness * SKELETON_HEIGHT);
+  // Text starts where the source line starts, like a paragraph, not floating in the middle of its patch.
+  const inset = line.thickness * PAD_ALONG;
+  return (
+    <>
+      <Animated.View style={[StyleSheet.absoluteFill, styles.start, { paddingHorizontal: inset }, skeleton]}>
+        <View
+          style={{
+            width: '100%',
+            height: barHeight,
+            borderRadius: barHeight / 2,
+            backgroundColor: line.color,
+          }}
+        />
+      </Animated.View>
+      {text ? (
+        <Animated.View style={[StyleSheet.absoluteFill, styles.start, { paddingHorizontal: inset }, reveal]}>
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.3}
+            style={[styles.text, { color: text.color, fontFamily: FONT_BY_WEIGHT[text.weight], fontSize: text.fontSize }]}>
+            {text.text}
+          </Text>
+        </Animated.View>
+      ) : null}
+    </>
+  );
+}
+
+function Patch({ line, children }: { line: OverlayLine; children: ReactNode }) {
   const centerX = useSharedValue(line.centerX);
   const centerY = useSharedValue(line.centerY);
   const length = useSharedValue(line.length);
@@ -127,13 +161,13 @@ function Patch({ line, filled, children }: { line: OverlayLine; filled?: boolean
     };
   });
 
-  const feather = Math.max(1, line.thickness * 0.12);
+  const feather = Math.max(2, line.thickness * 0.2);
   return (
     <Animated.View
       style={[
         styles.patch,
         placement,
-        filled && { backgroundColor: line.background, boxShadow: `0 0 ${feather}px 0 ${line.background}` },
+        { backgroundColor: line.background, borderRadius: feather / 2, boxShadow: `0 0 ${feather}px ${feather / 2}px ${line.background}` },
       ]}>
       {children}
     </Animated.View>
@@ -144,17 +178,13 @@ const styles = StyleSheet.create({
   patch: {
     position: 'absolute',
   },
-  centered: {
-    alignItems: 'center',
+  start: {
+    alignItems: 'flex-start',
     justifyContent: 'center',
-  },
-  spinner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    opacity: 0.9,
   },
   text: {
     includeFontPadding: false,
-    textAlign: 'center',
+    textAlign: 'left',
+    alignSelf: 'stretch',
   },
 });

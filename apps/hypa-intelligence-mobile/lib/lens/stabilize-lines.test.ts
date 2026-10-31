@@ -44,3 +44,8 @@ test('a line that jumped is not left behind as a ghost at its old place', () => 
   assert.equal(next[0].corners[0].x, 0.5);
   assert.notEqual(next[0].id, -1);
 });
+
+test('a misread line in the same place keeps its id', () => {
+  const [tracked] = trackLines([seen(0.1, 0, 'Responsabilidad', 7)], [line(0.102, 'Resp0nsab1l1d4d xx')], 200);
+  assert.equal(tracked.id, 7);
+});

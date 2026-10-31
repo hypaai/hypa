@@ -17,7 +17,7 @@ type Waiting = { message: string; resolve: (text: string) => void; reject: (erro
 type Inbound = { type: 'translation'; id: string; text: string } | { type: 'error'; id: string; message: string };
 
 export function lensSocketUrl(base = API_URL) {
-  return `${base.replace(/^http/i, 'ws').replace(/\/+$/, '')}/v2/translate/lens`;
+  return `${base.replace(/^http/i, 'ws').replace(/\/+$/, '')}/v2/agent/lens`;
 }
 
 export class LensSocket {
@@ -33,11 +33,12 @@ export class LensSocket {
 
   constructor(private readonly url = lensSocketUrl()) {}
 
-  translate(text: string, target: string): Promise<string> {
+  /** Each line runs through the agent pipeline (same as POST /v2/agent) on the server. */
+  translate(text: string, target: string, agent?: { provider: string; model: string }): Promise<string> {
     if (this.closed) return Promise.reject(new Error('Lens closed'));
     if (Date.now() < this.unavailableUntil) return Promise.reject(new LensSocketUnavailable());
     const id = String(++this.sequence);
-    const message = JSON.stringify({ type: 'translate', id, text, target });
+    const message = JSON.stringify({ type: 'translate', id, text, target, ...agent });
     return new Promise<string>((resolve, reject) => {
       this.waiting.set(id, { message, resolve, reject });
       if (this.open) this.socket?.send(message);
