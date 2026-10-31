@@ -626,6 +626,7 @@ class KeyboardViewController: UIInputViewController {
     boardMode = .alphabet
     syncBoardModeToHostField()
     hostFieldSignature = currentHostFieldSignature()
+    resumeAskCamera()
     rebuildKeyboard()
     publishPredictionContext()
     if usesNeuralEngine { modelQueue.async { [tinyKeys] in tinyKeys.load() } }
@@ -2324,7 +2325,8 @@ class KeyboardViewController: UIInputViewController {
   }
 
   private struct AskTurn {
-    let requestId = UUID().uuidString.lowercased()
+    var requestId = UUID().uuidString.lowercased()
+    var fromCamera = false
     var payload: [String: Any] = [:]
     var sentSelection: String?
     var sentDocument: String?
@@ -2437,6 +2439,38 @@ class KeyboardViewController: UIInputViewController {
     askShowsDetails = false
     askCopied = false
     rebuildKeyboard()
+  }
+
+  private static let askCameraKey = "askPendingCamera"
+  private func openAskCamera() {
+    let requestId = UUID().uuidString.lowercased()
+    UserDefaults.standard.set(
+      ["id": requestId, "at": Date().timeIntervalSince1970], forKey: Self.askCameraKey)
+    var link = URLComponents()
+    link.scheme = "hypaintelligence"
+    link.host = "ask-camera"
+    link.queryItems = [
+      URLQueryItem(name: "requestId", value: requestId),
+      URLQueryItem(name: "input", value: askInput),
+      URLQueryItem(name: "language", value: resolvedTtsLanguage().name),
+      URLQueryItem(name: "provider", value: settings.assistantProvider),
+      URLQueryItem(name: "model", value: settings.assistantModel),
+    ]
+    guard let url = link.url else { return }
+    openFirstAvailableHostURL([url][...])
+  }
+
+  private func resumeAskCamera() {
+    guard let pending = UserDefaults.standard.dictionary(forKey: Self.askCameraKey) else { return }
+    UserDefaults.standard.removeObject(forKey: Self.askCameraKey)
+    guard hasFullAccess, let id = pending["id"] as? String,
+      Date().timeIntervalSince1970 - (pending["at"] as? Double ?? 0) < 30 * 60
+    else { return }
+    resetAsk()
+    featureMode = .ask
+    askTurn = AskTurn(requestId: id, fromCamera: true, activity: "Reading your photo…")
+    askTurn?.request = "Photo"
+    recoverAsk(askGeneration)
   }
 
   private func sendAskSuggestion(_ text: String) {
@@ -2640,7 +2674,15 @@ class KeyboardViewController: UIInputViewController {
     let deadline = Date().addingTimeInterval(90)
     askTask = Task { [weak self] in
       while !Task.isCancelled {
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
+        let reply = try? await URLSession.shared.data(for: request)
+        if (reply?.1 as? HTTPURLResponse)?.statusCode == 404, let self,
+          generation == self.askGeneration, self.askTurn?.fromCamera == true
+        {
+          self.askTurn?.retryable = false
+          self.failAsk(generation, "No photo sent", detail: nil)
+          return
+        }
+        guard let (data, response) = reply,
           (response as? HTTPURLResponse)?.statusCode == 200,
           let body = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { break }
@@ -2934,7 +2976,12 @@ class KeyboardViewController: UIInputViewController {
       return makeAskRow(
         icon: nil, title: "Draft changed · result saved", trailing: [makeAskCopyButton()])
     case .recovered:
-      return makeAskRow(icon: nil, title: "Your reply is ready", trailing: [makeAskCopyButton()])
+      let line = turn.text.components(separatedBy: .newlines).first ?? turn.text
+      return makeAskRow(
+        icon: nil, title: line.isEmpty ? "Your reply is ready" : line,
+        trailing: [
+          makeAskPill("Insert") { [weak self] in self?.applyAskText(turn.text, insertAtCursor: true) }
+        ])
     }
   }
 
@@ -2989,6 +3036,13 @@ class KeyboardViewController: UIInputViewController {
     let cancel = makeCancelButton { [weak self] in self?.closeAsk() }
     header.addSubview(cancel)
 
+    let camera = makeSearchCircleIconButton(
+      image: sfSymbol("camera", size: 14, weight: .medium), background: settings.theme.key,
+      tint: settings.theme.label
+    ) { [weak self] in self?.openAskCamera() }
+    camera.accessibilityLabel = "Take photo"
+    header.addSubview(camera)
+
     let field = UIView()
     field.translatesAutoresizingMaskIntoConstraints = false
     field.applyKeyAesthetics(
@@ -3021,9 +3075,7 @@ class KeyboardViewController: UIInputViewController {
     }
 
     let mic = makeSearchCircleIconButton(
-      image: askMicUnavailable
-        ? sfSymbol("mic.slash", size: 14, weight: .medium)
-        : UIImage(named: "ic_audio_mic")?.withRenderingMode(.alwaysTemplate),
+      image: sfSymbol(askMicUnavailable ? "mic.slash" : "mic", size: 14, weight: .medium),
       background: settings.theme.key, tint: settings.theme.label
     ) { [weak self] in self?.startAskRecording() }
     mic.accessibilityLabel = "Speak instruction"
@@ -3033,7 +3085,8 @@ class KeyboardViewController: UIInputViewController {
 
     let ready = !askInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     let send = makeSearchCircleIconButton(
-      image: sfSymbol("arrow.up", size: 13), background: ready ? settings.theme.pill : settings.theme.key,
+      image: sfSymbol("arrow.up", size: 14, weight: .medium),
+      background: ready ? settings.theme.pill : settings.theme.key,
       tint: ready ? settings.theme.pillLabel : settings.theme.label
     ) { [weak self] in self?.sendAsk() }
     send.accessibilityLabel = "Send"
@@ -3044,7 +3097,9 @@ class KeyboardViewController: UIInputViewController {
     NSLayoutConstraint.activate([
       cancel.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: panelSideInset),
       cancel.centerYAnchor.constraint(equalTo: header.centerYAnchor),
-      field.leadingAnchor.constraint(equalTo: cancel.trailingAnchor, constant: 8),
+      camera.leadingAnchor.constraint(equalTo: cancel.trailingAnchor, constant: 8),
+      camera.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+      field.leadingAnchor.constraint(equalTo: camera.trailingAnchor, constant: 8),
       field.trailingAnchor.constraint(equalTo: mic.leadingAnchor, constant: -8),
       field.centerYAnchor.constraint(equalTo: header.centerYAnchor),
       field.heightAnchor.constraint(equalToConstant: 34),
